@@ -1,0 +1,2 @@
+keyword,volume
+seo,100

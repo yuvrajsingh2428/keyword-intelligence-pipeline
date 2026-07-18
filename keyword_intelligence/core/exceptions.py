@@ -74,3 +74,23 @@ class InitializationError(KeywordIntelligenceError):
         - Database connection failure at startup
         - Service dependency unavailable
     """
+
+
+class PipelineError(KeywordIntelligenceError):
+    """Raised when the pipeline encounters an execution failure."""
+
+
+class DataSourceError(PipelineError):
+    """Raised when a data source cannot be read or accessed."""
+
+
+class UnsupportedFileExtensionError(DataSourceError):
+    """Raised when a file extension is not supported by the loader."""
+
+
+class FileEncodingError(DataSourceError):
+    """Raised when a file cannot be decoded with supported encodings."""
+
+
+class SchemaValidationError(PipelineError):
+    """Raised when a dataframe does not match the required schema."""

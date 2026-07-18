@@ -14,3 +14,7 @@ python-dotenv>=1.1,<2.0
 
 # Logging
 loguru>=0.7,<1.0
+
+# Data Processing
+pandas>=2.0,<3.0
+openpyxl>=3.0,<4.0
