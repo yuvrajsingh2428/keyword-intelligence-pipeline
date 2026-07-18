@@ -1,0 +1,24 @@
+# ============================================================================
+# Keyword Intelligence Pipeline — Development Dependencies
+# ============================================================================
+# Install: pip install -r requirements-dev.txt
+# ============================================================================
+
+# Include all runtime dependencies
+-r requirements.txt
+
+# Testing
+pytest>=8.3,<9.0
+pytest-cov>=6.1,<7.0
+
+# Code Formatting
+black>=25.1,<26.0
+
+# Linting
+ruff>=0.12,<1.0
+
+# Type Checking
+mypy>=1.16,<2.0
+
+# Git Hooks
+pre-commit>=4.2,<5.0

@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "ms-python.debugpy",
+        "EditorConfig.EditorConfig",
+        "mikestead.dotenv",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml"
+    ]
+}

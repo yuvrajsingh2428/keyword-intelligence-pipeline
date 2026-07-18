@@ -1,0 +1,16 @@
+# ============================================================================
+# Keyword Intelligence Pipeline — Runtime Dependencies
+# ============================================================================
+# Install: pip install -r requirements.txt
+# ============================================================================
+
+# UI Framework
+streamlit>=1.45,<2.0
+
+# Configuration Management
+pydantic>=2.11,<3.0
+pydantic-settings>=2.9,<3.0
+python-dotenv>=1.1,<2.0
+
+# Logging
+loguru>=0.7,<1.0

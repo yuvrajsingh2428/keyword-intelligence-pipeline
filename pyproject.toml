@@ -1,0 +1,136 @@
+# ============================================================================
+# Keyword Intelligence Pipeline — Project Configuration
+# ============================================================================
+
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "keyword-intelligence-pipeline"
+version = "0.1.0"
+description = "An AI-powered keyword intelligence pipeline for automated keyword analysis, clustering, and strategic content recommendations."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.12"
+authors = [
+    {name = "Keyword Intelligence Team"},
+]
+keywords = ["keyword", "intelligence", "pipeline", "ai", "seo"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/your-org/keyword-intelligence-pipeline"
+Documentation = "https://github.com/your-org/keyword-intelligence-pipeline/tree/main/docs"
+
+# ============================================================================
+# Tool Configuration
+# ============================================================================
+
+# --- Black (Formatter) ---
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+include = '\.pyi?$'
+
+# --- Ruff (Linter) ---
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["keyword_intelligence", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "W",    # pycodestyle warnings
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+    "D",    # pydocstyle
+    "ANN",  # flake8-annotations
+]
+ignore = [
+    "D100",   # Missing docstring in public module (handled at package level)
+    "D104",   # Missing docstring in public package
+    "D203",   # One blank line before class docstring (conflicts with D211)
+    "D213",   # Multi-line docstring summary on second line (conflicts with D212)
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["keyword_intelligence"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "D",      # Docstrings not required in tests
+    "ANN",    # Type annotations relaxed in tests
+]
+
+# --- MyPy (Type Checker) ---
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+namespace_packages = true
+
+[[tool.mypy.overrides]]
+module = [
+    "streamlit.*",
+]
+ignore_missing_imports = true
+
+# --- Pytest ---
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers -ra"
+markers = [
+    "smoke: Smoke tests for basic functionality",
+    "settings: Configuration and settings tests",
+    "slow: Tests that take a long time to run",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# --- Coverage ---
+[tool.coverage.run]
+source = ["keyword_intelligence"]
+omit = [
+    "keyword_intelligence/ui/*",
+    "keyword_intelligence/services/base.py",
+    "keyword_intelligence/pipeline/context.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+fail_under = 80
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+    "pass",
+    "\\.\\.\\.",
+]

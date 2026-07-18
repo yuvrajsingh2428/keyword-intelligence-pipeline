@@ -1,0 +1,67 @@
+# ============================================================================
+# Keyword Intelligence Pipeline — .gitignore
+# ============================================================================
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+*.manifest
+*.spec
+
+# === Virtual Environments ===
+.venv/
+venv/
+ENV/
+env/
+
+# === Environment Variables ===
+.env
+!.env.example
+
+# === IDE ===
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+
+# === OS ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === Testing ===
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# === MyPy ===
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# === Ruff ===
+.ruff_cache/
+
+# === Logs ===
+logs/*
+!logs/.gitkeep
+*.log
+
+# === Streamlit ===
+.streamlit/
+
+# === Distribution ===
+*.tar.gz
+*.whl
