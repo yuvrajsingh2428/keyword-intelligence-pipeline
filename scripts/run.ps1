@@ -17,4 +17,4 @@ if (-Not (Test-Path $StreamlitPath)) {
 }
 
 Write-Host "Starting Keyword Intelligence Pipeline..." -ForegroundColor Cyan
-& $StreamlitPath run (Join-Path $ProjectRoot "app.py")
+& $StreamlitPath run (Join-Path $ProjectRoot "keyword_intelligence\ui\app.py")

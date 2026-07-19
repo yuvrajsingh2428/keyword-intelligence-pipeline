@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  keyword-intelligence:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: keyword-intelligence:latest
+    container_name: kip-app
+    ports:
+      - "8501:8501"
+    environment:
+      - APP_ENV=production
+    volumes:
+      - kip_logs:/app/logs
+      - kip_reports:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  kip_logs:
+  kip_reports:

@@ -12,21 +12,67 @@ An AI-powered keyword intelligence pipeline for automated keyword analysis, clus
 
 ## 📋 Overview
 
-The Keyword Intelligence Pipeline is an internal tool that automates keyword research and analysis using AI. It ingests keyword data, performs clustering and deduplication, and generates strategic content recommendations.
+The Keyword Intelligence Pipeline is an enterprise-grade automated keyword analysis tool. It ingests raw keyword datasets and enriches them by combining deterministic business logic with AI-powered classification. By analyzing a target company's business context, it intelligently filters, deduplicates, and categorizes keywords to surface the most relevant strategic content opportunities.
 
-**Current Status**: Phase 1 — Project Foundation ✅
+**Current Status**: Production Ready ✅
+
+## ✨ Features
+
+- **Business Context Extraction**: Automatically understands the target company's industry, products, and services from their domain.
+- **Deterministic Classification**: High-speed, rule-based keyword filtering to reduce unnecessary AI workload.
+- **AI-powered Keyword Classification**: Uses Large Language Models (LLMs) to accurately determine keyword relevance, intent, and semantic clustering.
+- **Duplicate Detection**: Identifies and removes exact and semantically duplicate keywords.
+- **Search Volume Enrichment**: Fetches and aligns keyword search volume and CPC metrics.
+- **Multi-Key Gemini Failover**: Robust AI layer that gracefully handles quota limits by rotating through multiple API keys.
+- **OpenRouter Fallback**: Ensures uninterrupted processing by automatically falling back to OpenRouter if primary providers fail.
+- **Streamlit Dashboard**: A professional, real-time UI for uploading datasets, monitoring pipeline progress, and reviewing results.
+- **Excel & JSON Reporting**: Produces clean, actionable Excel files for end-users and detailed JSON payloads for technical integration.
+
+## 🔄 Pipeline Workflow
+
+Upload Dataset
+↓
+Validation
+↓
+Business Context
+↓
+Duplicate Detection
+↓
+Search Volume
+↓
+AI Classification
+↓
+Report Generation
+
+## 🛡️ AI Resilience
+
+The pipeline features a highly resilient AI orchestration layer designed for production reliability:
+- **Automatic Gemini API key rotation**: Seamlessly cycles through up to 5 configured Google Gemini keys.
+- **Graceful quota handling**: Automatically detects `429 Too Many Requests` or quota limits and fails over without interrupting the pipeline.
+- **Automatic OpenRouter fallback**: If all primary Gemini keys are exhausted, the engine delegates unresolved keywords to OpenRouter.
+- **Guaranteed Pipeline Completion**: In the absolute worst-case scenario where all AI providers are down, the pipeline still completes using deterministic matches and produces a valid output.
+
+## 💻 Demo Workflow
+
+1. **Upload**: Provide a CSV/Excel dataset and enter the target company's domain.
+2. **Process**: The pipeline extracts business context and streams provider status directly to the UI.
+3. **Review**: View the comprehensive Pipeline Summary card and classification preview.
+4. **Download**: Export the completed analysis as a full report or filtered relevant keywords in Excel.
 
 ## 🏗️ Architecture
 
 ```
 keyword_intelligence/
-├── config/       → Settings management, logging configuration
-├── core/         → Logger factory, exception hierarchy
-├── models/       → Pydantic data models
-├── services/     → External service integrations (LLM, search APIs)
-├── pipeline/     → Pipeline orchestration and context management
-├── utils/        → Stateless helper functions
-└── ui/           → Streamlit presentation layer
+├── config/               → Settings management, logging configuration
+├── core/                 → Logger factory, exception hierarchy, constants
+├── models/               → Pydantic data models
+├── ai_intelligence/      → AI Provider registry, API integrations
+├── business_context/     → Business context extraction, enrichment, validation
+├── duplicate_detection/  → Canonicalization, keyword deduplication
+├── search_volume/        → Volume fetching, batching
+├── pipeline/             → Pipeline orchestration and stage definitions
+├── reporting/            → Analytics, formatting, and file export
+└── ui/                   → Streamlit presentation layer
 ```
 
 See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation, dependency injection patterns, and future LLM provider interface design.
@@ -54,7 +100,7 @@ cd keyword-intelligence-pipeline
 .venv\Scripts\Activate.ps1
 
 # Start the application
-streamlit run app.py
+streamlit run keyword_intelligence\ui\app.py
 ```
 
 **Linux / macOS (Make):**
@@ -74,15 +120,22 @@ source .venv/bin/activate
 make run
 ```
 
-### Environment Configuration
+### Environment Variables
+
+Configure your pipeline by copying `.env.example` to `.env`:
 
 ```bash
-# Copy the example environment file
 cp .env.example .env
-
-# Edit .env with your local settings
-# See .env.example for documentation of all available variables
 ```
+
+**Primary Configuration Variables:**
+- `APP_ENV`: Deployment environment (`development`, `staging`, `production`).
+- `LOG_LEVEL`: Application logging level (e.g., `INFO`, `DEBUG`).
+- `GOOGLE_GEMINI_API_KEY_1` to `5`: API keys for the primary Google Gemini provider. The system will automatically rotate through these.
+- `OPENROUTER_API_KEY`: API key for the OpenRouter fallback provider.
+- `OPENROUTER_MODEL`: The specific model to use for the OpenRouter fallback.
+
+*Note: Never commit your `.env` file or expose your API keys in version control.*
 
 ## 🛠️ Development
 
@@ -173,10 +226,10 @@ keyword-intelligence-pipeline/
 | Phase | Focus | Status |
 |---|---|---|
 | **Phase 1** | Project Foundation | ✅ Complete |
-| **Phase 2** | AI Integration (LLM providers) | 📋 Planned |
-| **Phase 3** | Data Pipeline (ingestion, caching) | 📋 Planned |
-| **Phase 4** | Analysis & Reporting | 📋 Planned |
-| **Phase 5** | Production Hardening | 📋 Planned |
+| **Phase 2** | AI Integration (LLM providers) | ✅ Complete |
+| **Phase 3** | Data Pipeline (ingestion, caching) | ✅ Complete |
+| **Phase 4** | Analysis & Reporting | ✅ Complete |
+| **Phase 5** | Production Hardening | ✅ Complete |
 
 See [docs/roadmap.md](docs/roadmap.md) for detailed phase descriptions.
 
