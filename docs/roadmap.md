@@ -48,65 +48,61 @@ gantt
 
 ---
 
-## Phase 2 — AI Integration
+## Phase 2 — Data Ingestion & Preprocessing
+
+> **Status**: Planned
+
+- [ ] `RawKeywordInput` and `IngestionResult` models
+- [ ] `IngestionService` (CSV parsing, raw text input)
+- [ ] Data validation and error handling for malformed input
+- [ ] `ProcessedKeyword` model (normalized text, word count, etc.)
+- [ ] `PreprocessingService` (lowercasing, whitespace trimming, character normalization)
+- [ ] Unit tests for ingestion and preprocessing edge cases
+
+---
+
+## Phase 3 — Duplicate Detection & Search Volume
+
+> **Status**: Planned
+
+- [ ] Exact match deduplication
+- [ ] Near-duplicate detection algorithms (e.g., Levenshtein, fuzzy matching)
+- [ ] Integration with Search Volume APIs (mocked or real)
+- [ ] `SearchVolumeService` implementation
+- [ ] Metrics caching mechanism
+
+---
+
+## Phase 4 — AI Intelligence
 
 > **Status**: Planned
 
 - [ ] LLM provider interface (`BaseLLMProvider`)
-- [ ] Google Gemini provider implementation
-- [ ] OpenAI provider implementation (optional)
-- [ ] Provider factory with `AI_PROVIDER` env var selection
-- [ ] Prompt template management
-- [ ] Response parsing and validation
-- [ ] Rate limiting and retry logic
-- [ ] Provider health checks
-- [ ] Integration tests with mock providers
+- [ ] Google Gemini / OpenAI provider implementations
+- [ ] AI prompt templates for keyword intent, categorization, and clustering
+- [ ] AI-powered clustering algorithms
+- [ ] Strategic content recommendation generation
 
 ---
 
-## Phase 3 — Data Pipeline
+## Phase 5 — Pipeline Orchestrator & UI
 
 > **Status**: Planned
 
-- [ ] PipelineContext implementation
-- [ ] Pipeline stage base class and registry
-- [ ] Keyword input ingestion (CSV, API, manual)
-- [ ] Search API integrations (Google, SEMrush)
-- [ ] Data normalization and validation
-- [ ] Intermediate result caching (Redis)
-- [ ] Database persistence layer
-- [ ] Pipeline execution logging and metrics
-- [ ] Data pipeline tests
-
----
-
-## Phase 4 — Analysis & Reporting
-
-> **Status**: Planned
-
-- [ ] Keyword clustering algorithms
-- [ ] Duplicate and near-duplicate detection
-- [ ] AI-powered keyword analysis
-- [ ] Strategic content recommendations
-- [ ] Interactive Streamlit dashboards
+- [ ] `PipelineContext` implementation to chain stages
+- [ ] Pipeline execution tracking, logging, and metrics
+- [ ] Interactive Streamlit dashboard for data upload
+- [ ] Visualizations for clusters, intent, and volume
 - [ ] Report generation (PDF, CSV export)
-- [ ] Visualization components (charts, graphs)
-- [ ] Analysis accuracy metrics
-- [ ] End-to-end integration tests
 
 ---
 
-## Phase 5 — Production Hardening
+## Phase 6 — Production Hardening
 
 > **Status**: Planned
 
 - [ ] Production deployment configuration
 - [ ] Secrets management integration
 - [ ] Performance optimization and profiling
-- [ ] Error monitoring and alerting
-- [ ] User authentication (if required)
-- [ ] API rate limit management
 - [ ] Comprehensive documentation
-- [ ] Load testing
-- [ ] Security audit
-- [ ] Production runbook
+- [ ] Security audit & runbook
