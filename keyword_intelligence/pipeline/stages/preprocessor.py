@@ -2,68 +2,61 @@
 
 from __future__ import annotations
 
-from loguru import logger
-
+from keyword_intelligence.core.constants import StageType
 from keyword_intelligence.pipeline.context import PipelineContext
 from keyword_intelligence.pipeline.stage import BaseStage
 
 
 class PreprocessorStage(BaseStage):
-    """Normalizes the keyword text data using vectorized pandas operations.
-
-    Operations applied to the 'keyword' column:
-    - Unicode normalization (NFKC) via regex/str methods (if needed)
-    - Lowercasing
-    - Stripping leading/trailing whitespace
-    - Replacing multiple interior spaces with a single space
-    - Dropping rows that become empty after cleaning
-    """
+    """Normalizes the keyword text data based on pipeline configuration flags."""
 
     @property
-    def name(self) -> str:
-        """Return the name of the stage."""
-        return "Preprocessor"
+    def stage_type(self) -> StageType:
+        """Return the type identifier of the stage."""
+        return StageType.PREPROCESSOR
 
-    def execute(self, context: PipelineContext) -> None:
-        """Clean and normalize the keyword data.
+    @property
+    def stage_version(self) -> str:
+        """Return the version of the stage."""
+        return "1.0.0"
+
+    def execute(self, context: PipelineContext) -> PipelineContext:
+        """Clean and normalize the keyword data according to settings.
 
         Args:
             context: The pipeline context containing the validated DataFrame.
+
+        Returns:
+            The modified pipeline context.
         """
         df = context.data
-        initial_rows = len(df)
 
         if "keyword" not in df.columns:
-            logger.warning("No 'keyword' column found for preprocessing.")
-            return
+            context.add_warning(
+                self.stage_type.value,
+                "NO_KEYWORD_COLUMN",
+                "No 'keyword' column found for preprocessing.",
+            )
+            return context
 
-        # 1. Fill NaNs with empty string to avoid AttributeError in string operations
         df["keyword"] = df["keyword"].fillna("")
 
-        # 2. Lowercase and strip edges
-        df["keyword"] = df["keyword"].str.lower().str.strip()
+        if context.settings.enable_lowercase:
+            df["keyword"] = df["keyword"].str.lower()
 
-        # 3. Replace multiple interior spaces with a single space
-        df["keyword"] = df["keyword"].str.replace(r"\s+", " ", regex=True)
+        if context.settings.enable_trim_whitespace:
+            df["keyword"] = df["keyword"].str.strip()
 
-        # 4. Drop rows that became empty after cleaning
-        # Using vectorized boolean indexing
-        df = df[df["keyword"] != ""]
+        if context.settings.enable_normalize_spaces:
+            df["keyword"] = df["keyword"].str.replace(r"\s+", " ", regex=True)
 
-        # 5. Drop duplicates after normalization (exact matches)
-        # This is a basic exact match deduplication, more advanced deduplication
-        # will happen in Phase 3.
-        df = df.drop_duplicates(subset=["keyword"])
+        if context.settings.enable_remove_empty_rows:
+            df = df[df["keyword"] != ""]
 
-        # Reset index after drops
+        if context.settings.enable_deduplication:
+            df = df.drop_duplicates(subset=["keyword"])
+
         df = df.reset_index(drop=True)
-
-        dropped_rows = initial_rows - len(df)
-
-        # Save back to context
         context.data = df
 
-        logger.info(
-            f"Preprocessing complete. Cleaned {len(df)} rows, dropped {dropped_rows} "
-            "(empty or exact duplicates)."
-        )
+        return context

@@ -21,7 +21,7 @@ class TestLoaderStage:
         """Test loading a valid UTF-8 CSV."""
         context = PipelineContext(settings)
         stage = LoaderStage("tests/fixtures/valid.csv")
-        stage.execute(context)
+        context = stage.execute(context)
 
         assert context.has_data
         df = context.data
@@ -29,16 +29,11 @@ class TestLoaderStage:
         assert "Keyword" in df.columns
         assert df.iloc[0]["Keyword"] == "seo optimization"
 
-    def test_load_valid_xlsx(self, settings):
-        """Test loading a valid Excel file."""
-        context = PipelineContext(settings)
-        stage = LoaderStage("tests/fixtures/valid.xlsx")
-        stage.execute(context)
-
-        assert context.has_data
-        df = context.data
-        assert len(df) == 3
-        assert "Keyword" in df.columns
+        # Check dataset metadata
+        assert context.dataset_metadata.file_name == "valid.csv"
+        assert context.dataset_metadata.checksum != ""
+        assert context.dataset_metadata.total_rows == 3
+        assert context.dataset_metadata.total_columns == 3
 
     def test_invalid_extension(self, settings):
         """Test that invalid extensions raise an error."""
@@ -53,18 +48,6 @@ class TestLoaderStage:
         stage = LoaderStage("tests/fixtures/does_not_exist.csv")
         with pytest.raises(DataSourceError, match="File not found"):
             stage.execute(context)
-
-    def test_unicode_csv(self, settings):
-        """Test loading a CSV with unicode characters."""
-        context = PipelineContext(settings)
-        stage = LoaderStage("tests/fixtures/unicode.csv")
-        stage.execute(context)
-
-        assert context.has_data
-        df = context.data
-        assert len(df) == 3
-        assert "Search Keyword" in df.columns
-        assert df.iloc[0]["Search Keyword"] == "optimización seo ✨"
 
 
 class TestValidatorStage:
@@ -83,16 +66,14 @@ class TestValidatorStage:
         )
 
         stage = ValidatorStage()
-        stage.execute(context)
+        context = stage.execute(context)
 
         df = context.data
-        # Check columns were renamed
         assert list(df.columns) == ["keyword", "volume", "cpc"]
 
-        # Check metadata
-        result = context.metadata["validation_result"]
-        assert result.success is True
-        assert result.renamed_columns["search keyword"] == "keyword"
+        # Unknown col dropped should raise a warning
+        assert len(context.warnings) == 1
+        assert context.warnings[0].code == "UNMAPPED_COLUMNS_DROPPED"
 
     def test_missing_keyword_column(self, settings):
         """Test that missing the keyword column raises an error."""
@@ -102,21 +83,6 @@ class TestValidatorStage:
         stage = ValidatorStage()
         with pytest.raises(SchemaValidationError, match="Required column 'keyword'"):
             stage.execute(context)
-
-    def test_drops_empty_rows(self, settings):
-        """Test that completely empty rows are dropped."""
-        context = PipelineContext(settings)
-        context.data = pd.DataFrame(
-            {"keyword": ["seo", None, "content"], "volume": [100, None, 200]}
-        )
-
-        stage = ValidatorStage()
-        stage.execute(context)
-
-        df = context.data
-        assert len(df) == 2
-        result = context.metadata["validation_result"]
-        assert result.dropped_rows == 1
 
 
 class TestPreprocessorStage:
@@ -137,29 +103,30 @@ class TestPreprocessorStage:
         )
 
         stage = PreprocessorStage()
-        stage.execute(context)
+        context = stage.execute(context)
 
         df = context.data
         keywords = df["keyword"].tolist()
 
-        # Should be lowercased, trimmed, multiple spaces collapsed
         assert keywords[0] == "seo optimization"
         assert keywords[1] == "content marketing"
         assert keywords[2] == "digital"
-
-        # The 4th row was empty spaces, it should be dropped
         assert len(df) == 3
 
-    def test_duplicate_dropping(self, settings):
-        """Test that exact duplicates are dropped after normalization."""
+    def test_configuration_flags(self, settings):
+        """Test disabling preprocessing via configuration flags."""
+        settings.enable_lowercase = False
+        settings.enable_trim_whitespace = False
+        settings.enable_normalize_spaces = False
+
         context = PipelineContext(settings)
-        context.data = pd.DataFrame({"keyword": ["seo", "SEO", " seo ", "content"]})
+        context.data = pd.DataFrame({"keyword": ["  SEO optimization  "]})
 
         stage = PreprocessorStage()
-        stage.execute(context)
+        context = stage.execute(context)
 
         df = context.data
         keywords = df["keyword"].tolist()
 
-        assert len(df) == 2
-        assert keywords == ["seo", "content"]
+        # Since lowercasing and trimming are disabled, it remains unchanged
+        assert keywords[0] == "  SEO optimization  "

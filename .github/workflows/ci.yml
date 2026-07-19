@@ -1,67 +1,50 @@
-# ============================================================================
-# Keyword Intelligence Pipeline — CI Pipeline
-# ============================================================================
-# Runs on every push and pull request to main.
-# Steps: lint → format check → type check → test with coverage
-# ============================================================================
-
-name: CI
+name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ "main" ]
   pull_request:
-    branches: [main]
-
-permissions:
-  contents: read
+    branches: [ "main" ]
 
 jobs:
-  quality:
-    name: Code Quality & Tests
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    strategy:
+      matrix:
+        python-version: ["3.11"]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev,test]
 
-      - name: Lint with Ruff
-        run: ruff check keyword_intelligence/ tests/
+    - name: Vulnerability Scan (Bandit)
+      run: |
+        pip install bandit
+        bandit -r keyword_intelligence -ll
 
-      - name: Check formatting with Black
-        run: black --check keyword_intelligence/ tests/
+    - name: Lint with Ruff
+      run: |
+        ruff check .
 
-      - name: Type check with MyPy
-        run: mypy keyword_intelligence/
+    - name: Type check with MyPy
+      run: |
+        mypy keyword_intelligence tests
 
-      - name: Run tests with coverage
-        run: |
-          pytest tests/ \
-            -v \
-            --tb=short \
-            --cov=keyword_intelligence \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml
+    - name: Test with pytest and coverage
+      run: |
+        pytest tests/ --cov=keyword_intelligence --cov-report=xml
 
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.xml
-          retention-days: 30
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

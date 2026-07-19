@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
-
 from typing import ClassVar
 
 import pandas as pd
 from loguru import logger
 
+from keyword_intelligence.core.constants import StageType
 from keyword_intelligence.core.exceptions import (
     DataSourceError,
     FileEncodingError,
@@ -33,15 +34,23 @@ class LoaderStage(BaseStage):
         self.file_path = Path(file_path)
 
     @property
-    def name(self) -> str:
-        """Return the name of the stage."""
-        return "Loader"
+    def stage_type(self) -> StageType:
+        """Return the type identifier of the stage."""
+        return StageType.LOADER
 
-    def execute(self, context: PipelineContext) -> None:
+    @property
+    def stage_version(self) -> str:
+        """Return the version of the stage."""
+        return "1.0.0"
+
+    def execute(self, context: PipelineContext) -> PipelineContext:
         """Read the file and set the DataFrame in the context.
 
         Args:
             context: The pipeline context to populate.
+
+        Returns:
+            The modified pipeline context.
 
         Raises:
             UnsupportedFileExtensionError: If the file is not a supported type.
@@ -58,7 +67,9 @@ class LoaderStage(BaseStage):
                 f"Must be one of {self.SUPPORTED_EXTENSIONS}"
             )
 
-        logger.info(f"Loading data from {self.file_path}")
+        # Generate SHA256 checksum
+        checksum = self._generate_checksum()
+        file_size = self.file_path.stat().st_size
 
         try:
             df = self._load_csv() if ext == ".csv" else self._load_excel()
@@ -68,8 +79,25 @@ class LoaderStage(BaseStage):
             raise DataSourceError(f"Failed to read file: {e}") from e
 
         context.data = df
-        context.metadata["source_file"] = str(self.file_path)
-        logger.info(f"Loaded {len(df)} rows from {self.file_path.name}")
+
+        # Populate DatasetMetadata
+        context.dataset_metadata.file_name = self.file_path.name
+        context.dataset_metadata.file_size = file_size
+        context.dataset_metadata.file_extension = ext
+        context.dataset_metadata.checksum = checksum
+        context.dataset_metadata.total_rows = len(df)
+        context.dataset_metadata.total_columns = len(df.columns)
+        context.dataset_metadata.original_column_names = df.columns.tolist()
+
+        return context
+
+    def _generate_checksum(self) -> str:
+        """Generate SHA256 checksum of the file."""
+        sha256 = hashlib.sha256()
+        with open(self.file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                sha256.update(chunk)
+        return sha256.hexdigest()
 
     def _load_csv(self) -> pd.DataFrame:
         """Attempt to load a CSV using supported encodings."""
@@ -78,7 +106,6 @@ class LoaderStage(BaseStage):
         for encoding in self.SUPPORTED_ENCODINGS:
             try:
                 # We use dtype=str to avoid pandas guessing types incorrectly
-                # for things like volume (which might have commas) early on.
                 df = pd.read_csv(self.file_path, encoding=encoding, dtype=str)
                 logger.debug(
                     f"Successfully decoded {self.file_path.name} with {encoding}"

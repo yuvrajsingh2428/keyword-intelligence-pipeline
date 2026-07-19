@@ -50,7 +50,7 @@ setup: ## Create venv and install all dependencies
 	@echo Setup complete. Activate venv with: .venv\Scripts\activate
 
 run: ## Start the Streamlit application
-	$(STREAMLIT) run app.py
+	$(STREAMLIT) run keyword_intelligence/ui/app.py
 
 lint: ## Run Ruff linter
 	$(RUFF) check $(SRC)/ $(TESTS)/

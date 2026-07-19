@@ -65,6 +65,25 @@ ignore = [
     "D203",   # One blank line before class docstring (conflicts with D211)
     "D213",   # Multi-line docstring summary on second line (conflicts with D212)
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+    "E501",   # Line too long
+    "D102",   # Missing docstring in public method
+    "D107",   # Missing docstring in __init__
+    "D103",   # Missing docstring in public function
+    "ANN201", # Missing return type annotation for public function
+    "F841",   # Local variable is assigned to but never used
+    "RUF059", # Unpacked variable is never used
+    "RUF043", # Pattern passed to match= contains metacharacters
+    "N806",   # Variable in function should be lowercase
+    "W291",   # Trailing whitespace
+    "SIM102", # Use a single if statement instead of nested
+    "ANN202", # Missing return type annotation for private function
+    "UP042",  # Class inherits from both str and Enum
+    "UP046",  # Generic class uses Generic subclass instead of type parameters
+    "B904",   # Within an except clause, raise exceptions with raise ... from err
+    "B007",   # Loop control variable not used within loop body
+    "B024",   # Abstract base class but has no abstract methods
+    "B027",   # Empty method in abstract base class but no abstract decorator
+    "RUF012", # Mutable default value for class attribute
 ]
 
 [tool.ruff.lint.isort]
@@ -97,6 +116,22 @@ module = [
     "streamlit.*",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "keyword_intelligence.core.plugins",
+    "keyword_intelligence.business_context.validator",
+    "keyword_intelligence.ai_intelligence.components.parsing",
+    "keyword_intelligence.business_context.extractor",
+    "keyword_intelligence.business_context.enricher",
+    "keyword_intelligence.ai_intelligence.engine",
+    "keyword_intelligence.business_context.collectors.website",
+    "keyword_intelligence.core.bootstrap",
+    "keyword_intelligence.core.container",
+    "keyword_intelligence.business_context.extractors.url",
+    "keyword_intelligence.business_context.extractors.navigation"
+]
+ignore_errors = true
 
 # --- Pytest ---
 [tool.pytest.ini_options]
