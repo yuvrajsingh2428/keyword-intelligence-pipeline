@@ -42,13 +42,29 @@ def main() -> None:
     st.markdown("Automated keyword analysis, classification, and clustering.")
     st.markdown("---")
 
+    import pickle
+    import os
+
+    STATE_FILE = ".last_run.pkl"
+
     # Initialize state
     if "is_processing" not in st.session_state:
         st.session_state.is_processing = False
+    
+    # Attempt to load from disk on fresh session
     if "result_context" not in st.session_state:
-        st.session_state.result_context = None
-    if "result_report" not in st.session_state:
-        st.session_state.result_report = None
+        if os.path.exists(STATE_FILE):
+            try:
+                with open(STATE_FILE, "rb") as f:
+                    saved_state = pickle.load(f)
+                for k, v in saved_state.items():
+                    st.session_state[k] = v
+            except Exception:
+                st.session_state.result_context = None
+                st.session_state.result_report = None
+        else:
+            st.session_state.result_context = None
+            st.session_state.result_report = None
 
     # 1. Setup Form
     st.subheader("1. Setup")
@@ -131,6 +147,21 @@ def main() -> None:
                 st.session_state.result_context = runner.context
                 st.session_state.result_report = runner.report
                 st.session_state.is_processing = False
+                
+                # Save state to disk for persistence across browser refreshes
+                try:
+                    with open(STATE_FILE, "wb") as f:
+                        pickle.dump({
+                            "result_context": runner.context,
+                            "result_report": runner.report,
+                            "file_bytes": st.session_state.file_bytes,
+                            "file_name": st.session_state.file_name,
+                            "company_name": st.session_state.company_name,
+                            "website": st.session_state.website,
+                        }, f)
+                except Exception:
+                    pass
+
                 status.update(
                     label="Pipeline Complete", state="complete", expanded=False
                 )
@@ -197,13 +228,13 @@ def main() -> None:
 
         with pd.ExcelWriter(buf_rel, engine="openpyxl") as w:
             df_rel = df
-            if "relevance" in df_rel.columns:
-                df_rel = df_rel[
-                    df_rel["relevance"].astype(str).str.lower() == "relevant"
-                ]
-            elif "business_relevance" in df_rel.columns:
+            if "business_relevance" in df_rel.columns:
                 df_rel = df_rel[
                     df_rel["business_relevance"].astype(str).str.lower() == "relevant"
+                ]
+            elif "relevance" in df_rel.columns:
+                df_rel = df_rel[
+                    df_rel["relevance"].astype(str).str.lower() == "relevant"
                 ]
             df_rel.to_excel(w, sheet_name="Relevant Keywords", index=False)
 
