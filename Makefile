@@ -46,6 +46,7 @@ setup: ## Create venv and install all dependencies
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements-dev.txt
+	$(PIP) install -e .
 	@echo.
 	@echo Setup complete. Activate venv with: .venv\Scripts\activate
 

@@ -98,13 +98,25 @@ def main() -> None:
             status_container = st.empty()
 
             from typing import Any
+
             def st_sink(msg: Any) -> None:
                 record_msg = msg.record["message"]
-                if "Using Gemini" in record_msg or "Switching to" in record_msg or "exhausted" in record_msg or "OpenRouter" in record_msg or "quota" in record_msg:
+                if (
+                    "Using Gemini" in record_msg
+                    or "Switching to" in record_msg
+                    or "exhausted" in record_msg
+                    or "OpenRouter" in record_msg
+                    or "quota" in record_msg
+                ):
                     status_container.markdown(f"**Status**: {record_msg}")
 
             from loguru import logger
-            logger_id = logger.add(st_sink, format="{message}", filter=lambda record: "keyword_intelligence" in str(record["name"]))
+
+            logger_id = logger.add(
+                st_sink,
+                format="{message}",
+                filter=lambda record: "keyword_intelligence" in str(record["name"]),
+            )
 
             runner = PipelineRunner()
             try:
@@ -152,7 +164,9 @@ def main() -> None:
         m3.metric("Irrelevant Keywords", f"{rel.irrelevant:,}")
 
         df = context.data
-        ai_classified = df["ai_confidence"].notna().sum() if "ai_confidence" in df.columns else 0
+        ai_classified = (
+            df["ai_confidence"].notna().sum() if "ai_confidence" in df.columns else 0
+        )
         det_matches = len(df) - ai_classified
 
         m4, m5, m6 = st.columns(3)
@@ -164,7 +178,9 @@ def main() -> None:
         )
 
         filtered_count = stats.duplicate_keywords + rel.irrelevant
-        st.success(f"Pipeline Completed Successfully. Processed: {stats.total_keywords}, Relevant: {rel.relevant}, Filtered: {filtered_count}")
+        st.success(
+            f"Pipeline Completed Successfully. Processed: {stats.total_keywords}, Relevant: {rel.relevant}, Filtered: {filtered_count}"
+        )
 
         st.markdown("#### Keyword Classification Preview")
         st.dataframe(context.data.head(20), use_container_width=True)
@@ -182,9 +198,13 @@ def main() -> None:
         with pd.ExcelWriter(buf_rel, engine="openpyxl") as w:
             df_rel = df
             if "relevance" in df_rel.columns:
-                df_rel = df_rel[df_rel["relevance"].astype(str).str.lower() == "relevant"]
+                df_rel = df_rel[
+                    df_rel["relevance"].astype(str).str.lower() == "relevant"
+                ]
             elif "business_relevance" in df_rel.columns:
-                df_rel = df_rel[df_rel["business_relevance"].astype(str).str.lower() == "relevant"]
+                df_rel = df_rel[
+                    df_rel["business_relevance"].astype(str).str.lower() == "relevant"
+                ]
             df_rel.to_excel(w, sheet_name="Relevant Keywords", index=False)
 
         with dl_col1:

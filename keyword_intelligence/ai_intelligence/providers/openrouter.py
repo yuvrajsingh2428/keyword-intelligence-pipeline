@@ -54,10 +54,7 @@ class OpenRouterProvider(AIProvider):
             # We can ping the models endpoint to verify key.
             url = self.base_url.replace("/chat/completions", "")
             if not url.endswith("/models"):
-                if url.endswith("/"):
-                    url = url + "models"
-                else:
-                    url = url + "/models"
+                url = url + "models" if url.endswith("/") else url + "/models"
 
             headers = {"Authorization": f"Bearer {self.api_key}"}
             response = requests.get(url, headers=headers, timeout=5.0)
@@ -75,7 +72,7 @@ class OpenRouterProvider(AIProvider):
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "http://localhost:8501", # Optional, for openrouter stats
+            "HTTP-Referer": "http://localhost:8501",  # Optional, for openrouter stats
             "X-Title": "Keyword Intelligence Pipeline",
         }
 
@@ -83,14 +80,14 @@ class OpenRouterProvider(AIProvider):
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.1,
-            # Some models on OpenRouter require explicit max_tokens to prevent 402 if credit is low, 
+            # Some models on OpenRouter require explicit max_tokens to prevent 402 if credit is low,
             # but usually it's best to leave it to the provider if credit is sufficient.
             # We add 2000 as a safe upper bound for JSON lists.
-            "max_tokens": 4000, 
-            "response_format": {"type": "json_object"}
+            "max_tokens": 4000,
+            "response_format": {"type": "json_object"},
         }
 
         try:
@@ -100,13 +97,13 @@ class OpenRouterProvider(AIProvider):
             response.raise_for_status()
 
             data = response.json()
-            raw_text = data['choices'][0]['message']['content'] or ""
+            raw_text = data["choices"][0]["message"]["content"] or ""
             logger.debug(f"OpenRouter raw response snippet:\n{raw_text[:300]}...")
             return raw_text
 
         except requests.exceptions.RequestException as e:
             logger.error(f"OpenRouter API error: {e}")
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 logger.error(f"Response: {e.response.text}")
             raise RuntimeError(f"OpenRouter API failure: {e}") from e
         except Exception as e:

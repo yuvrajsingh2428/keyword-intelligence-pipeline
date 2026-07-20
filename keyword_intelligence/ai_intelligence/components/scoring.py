@@ -94,9 +94,7 @@ class ResultAggregator:
             return (
                 getattr(r, attr).value
                 if r and hasattr(getattr(r, attr), "value")
-                else getattr(r, attr)
-                if r
-                else None
+                else getattr(r, attr) if r else None
             )
 
         # Map new columns, preserving existing values (e.g. from deterministic filter)

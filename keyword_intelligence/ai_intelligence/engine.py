@@ -118,7 +118,18 @@ class AIEngine:
     @staticmethod
     def _is_retryable_error(e: Exception) -> bool:
         err_str = str(e).lower()
-        retry_keywords = ["429", "402", "500", "502", "503", "504", "quota", "rate limit", "timeout", "payment required"]
+        retry_keywords = [
+            "429",
+            "402",
+            "500",
+            "502",
+            "503",
+            "504",
+            "quota",
+            "rate limit",
+            "timeout",
+            "payment required",
+        ]
         return any(k in err_str for k in retry_keywords)
 
     def process(self, context: PipelineContext) -> None:
@@ -256,8 +267,12 @@ class AIEngine:
         if exec_exceptions and provider.provider_name == "gemini":
             # Check if it failed after exhausting all keys or if it's retryable
             err_str = " ".join(str(e) for e in exec_exceptions).lower()
-            if "exhausted" in err_str or any(self._is_retryable_error(e) for e in exec_exceptions):
-                logger.warning("All Gemini keys exhausted or unavailable. Switching to OpenRouter.")
+            if "exhausted" in err_str or any(
+                self._is_retryable_error(e) for e in exec_exceptions
+            ):
+                logger.warning(
+                    "All Gemini keys exhausted or unavailable. Switching to OpenRouter."
+                )
 
                 # Determine unresolved keywords by parsing successful responses
                 successful_kws = set()
@@ -276,12 +291,19 @@ class AIEngine:
                         fallback_provider = self.resolver.resolve("openrouter")
                         logger.info("Switching to OpenRouter")
                         fb_actual_batch_size = min(
-                            self.config.batch_size, fallback_provider.capabilities.max_batch_size
+                            self.config.batch_size,
+                            fallback_provider.capabilities.max_batch_size,
                         )
-                        fb_batches = [unresolved[i : i + fb_actual_batch_size] for i in range(0, len(unresolved), fb_actual_batch_size)]
+                        fb_batches = [
+                            unresolved[i : i + fb_actual_batch_size]
+                            for i in range(0, len(unresolved), fb_actual_batch_size)
+                        ]
 
                         fb_responses, fb_exceptions = self.executor.execute(
-                            fallback_provider, template, self.prompt_renderer, fb_batches
+                            fallback_provider,
+                            template,
+                            self.prompt_renderer,
+                            fb_batches,
                         )
                         raw_responses.extend(fb_responses)
                         exec_exceptions.extend(fb_exceptions)

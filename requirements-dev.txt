@@ -20,6 +20,7 @@ ruff>=0.12,<1.0
 # Type Checking
 mypy>=1.16,<2.0
 pandas-stubs>=2.0,<3.0
+types-networkx>=3.0,<4.0
 
 # Git Hooks
 pre-commit>=4.2,<5.0

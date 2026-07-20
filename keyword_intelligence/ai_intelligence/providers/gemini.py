@@ -98,23 +98,47 @@ class GeminiProvider(AIProvider):
 
             except APIError as e:
                 err_str = str(e).lower()
-                retry_keywords = ["429", "quota", "rate limit", "503", "500", "timeout", "unavailable", "exhausted", "overloaded"]
+                retry_keywords = [
+                    "429",
+                    "quota",
+                    "rate limit",
+                    "503",
+                    "500",
+                    "timeout",
+                    "unavailable",
+                    "exhausted",
+                    "overloaded",
+                ]
 
                 if any(k in err_str for k in retry_keywords):
-                    logger.warning(f"Gemini API Key #{attempt_idx + 1} quota exceeded or unavailable")
+                    logger.warning(
+                        f"Gemini API Key #{attempt_idx + 1} quota exceeded or unavailable"
+                    )
                     if attempt_idx + 1 < len(self.api_keys):
                         logger.info(f"Switching to Gemini API Key #{attempt_idx + 2}")
                         continue
                     else:
                         logger.warning("All Gemini API keys exhausted")
-                        raise RuntimeError(f"All Gemini API keys exhausted. Last error: {e}") from e
+                        raise RuntimeError(
+                            f"All Gemini API keys exhausted. Last error: {e}"
+                        ) from e
                 else:
                     logger.error(f"Gemini API error: {e.message}")
                     raise RuntimeError(f"Gemini API failure: {e.message}") from e
 
             except Exception as e:
                 err_str = str(e).lower()
-                retry_keywords = ["429", "quota", "rate limit", "503", "500", "timeout", "unavailable", "exhausted", "connection"]
+                retry_keywords = [
+                    "429",
+                    "quota",
+                    "rate limit",
+                    "503",
+                    "500",
+                    "timeout",
+                    "unavailable",
+                    "exhausted",
+                    "connection",
+                ]
 
                 if any(k in err_str for k in retry_keywords):
                     logger.warning(f"Gemini API Key #{attempt_idx + 1} unavailable")
@@ -123,7 +147,9 @@ class GeminiProvider(AIProvider):
                         continue
                     else:
                         logger.warning("All Gemini API keys exhausted")
-                        raise RuntimeError(f"All Gemini API keys exhausted. Last error: {e}") from e
+                        raise RuntimeError(
+                            f"All Gemini API keys exhausted. Last error: {e}"
+                        ) from e
                 else:
                     logger.error(f"Unexpected error communicating with Gemini: {e}")
                     raise

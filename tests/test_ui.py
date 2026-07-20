@@ -45,9 +45,6 @@ class TestSessionManager:
         assert SessionManager.get_current_page() == "results"
 
 
-
-
-
 class TestPipelineRunner:
     """Test the pipeline runner service."""
 
