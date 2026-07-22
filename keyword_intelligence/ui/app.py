@@ -321,17 +321,70 @@ def main() -> None:
         st.markdown("#### Downloads")
         dl_col1, dl_col2 = st.columns(2)
 
-        df_relevant = df[df["relevant"] == True] if "relevant" in df.columns else df
+        # Clean the dataframe for business output
+        df_business = df.rename(
+            columns={
+                "classification_stage": "classification",
+                "decision_confidence": "confidence",
+                "company_name": "company",
+                "company_website": "website",
+                "volume": "search_volume",
+            }
+        ).copy()
+
+        if "relevant" in df_business.columns:
+            df_business["relevant"] = df_business["relevant"].map(
+                {
+                    True: "Relevant",
+                    False: "Irrelevant",
+                    "True": "Relevant",
+                    "False": "Irrelevant",
+                }
+            )
+
+        if "confidence" in df_business.columns:
+            df_business["confidence"] = df_business["confidence"].astype(float).round(2)
+
+        sort_cols = []
+        sort_asc = []
+        if "relevant" in df_business.columns:
+            sort_cols.append("relevant")
+            sort_asc.append(False)
+        if "search_volume" in df_business.columns:
+            sort_cols.append("search_volume")
+            sort_asc.append(False)
+
+        if sort_cols:
+            df_business = df_business.sort_values(by=sort_cols, ascending=sort_asc)
+
+        target_cols = [
+            "keyword",
+            "search_volume",
+            "relevant",
+            "confidence",
+            "brand",
+            "category",
+            "search_intent",
+            "classification",
+            "recommended_action",
+            "reason",
+            "company",
+            "website",
+        ]
+        available_cols = [c for c in target_cols if c in df_business.columns]
+        df_business = df_business[available_cols]
+
+        df_relevant = df_business[df_business["relevant"] == "Relevant"] if "relevant" in df_business.columns else df_business
 
         # Create Excel for all data
         buffer_all = io.BytesIO()
         # openpyxl is typical engine but xlsxwriter is fine if installed. Fallback to openpyxl
         try:
             with pd.ExcelWriter(buffer_all, engine="xlsxwriter") as writer:
-                df.to_excel(writer, index=False, sheet_name="Complete Report")
+                df_business.to_excel(writer, index=False, sheet_name="Complete Report")
         except ImportError:
             with pd.ExcelWriter(buffer_all, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False, sheet_name="Complete Report")
+                df_business.to_excel(writer, index=False, sheet_name="Complete Report")
         excel_all = buffer_all.getvalue()
 
         # Create Excel for relevant data
