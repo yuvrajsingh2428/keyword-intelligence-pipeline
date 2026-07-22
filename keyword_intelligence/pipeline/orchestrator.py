@@ -75,6 +75,9 @@ class PipelineOrchestrator:
 
                     self._trigger_event("before_stage", stage.stage_type, context)
 
+                    from datetime import datetime
+
+                    absolute_start = datetime.utcnow()
                     start_time = time.perf_counter()
 
                     initial_rows = len(context.data) if context.has_data else 0
@@ -85,27 +88,38 @@ class PipelineOrchestrator:
                     context = stage.execute(context)
 
                     end_time = time.perf_counter()
+                    absolute_end = datetime.utcnow()
                     duration_ms = (end_time - start_time) * 1000
 
                     final_rows = len(context.data) if context.has_data else 0
 
                     metrics = StageMetrics(
                         stage_name=stage.stage_type.value,
+                        start_time=absolute_start,
+                        end_time=absolute_end,
                         rows_loaded=initial_rows,
+                        rows_output=final_rows,
                         rows_removed=(
                             initial_rows - final_rows
                             if initial_rows > final_rows
                             else 0
                         ),
                         processing_time_ms=duration_ms,
+                        success=True,
                         warnings_count=len(context.warnings) - initial_warnings,
                         errors_count=len(context.errors) - initial_errors,
+                        warnings=[
+                            w.message for w in context.warnings[initial_warnings:]
+                        ],
+                        exceptions=[e.message for e in context.errors[initial_errors:]],
                     )
 
                     logger.info(
-                        f"Stage '{stage.stage_type.value}' completed in {duration_ms:.2f}ms. "
-                        f"Rows processed: {final_rows}, Rows removed: {metrics.rows_removed}. "
-                        f"Warnings: {metrics.warnings_count}, Errors: {metrics.errors_count}."
+                        f"Running {stage.stage_type.value}...\n"
+                        f"✓ Completed\n"
+                        f"Input Rows: {initial_rows}\n"
+                        f"Output Rows: {final_rows}\n"
+                        f"Duration: {duration_ms / 1000.0:.2f} sec"
                     )
 
                     self._trigger_event("after_stage", stage.stage_type, context)

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from keyword_intelligence.business_context.models import BusinessProfile
 from keyword_intelligence.models.pipeline import (
     DatasetMetadata,
     PipelineError,
@@ -32,7 +31,7 @@ class PipelineContext:
         self.settings = settings
         self.execution_id = str(uuid.uuid4())
         self._data: pd.DataFrame | None = None
-        self.business_profile: BusinessProfile | None = None
+        self.business_profile: Any | None = None
 
         self.dataset_metadata = DatasetMetadata()
         self.pipeline_metrics = PipelineMetrics()

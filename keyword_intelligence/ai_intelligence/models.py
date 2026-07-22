@@ -29,31 +29,29 @@ class KeywordResponseSchema(AppBaseModel):
     """Strict JSON schema expected from the LLM parsing phase."""
 
     keyword: str
-    relevant: bool
-    classification: RelevanceEnum
-    confidence: int  # 0 to 100
-    reasoning: str
-    matched_business_fact: str | None = None
-    matched_category: str | None = None
-    matched_brand: str | None = None
-    matched_product: str | None = None
+    relevance: RelevanceEnum
+    reason: str
+    search_intent: str
+    category: str
+    confidence: float  # 0.0 to 1.0
+    recommended_action: str
 
 
 class AIClassificationResult(AppBaseModel):
     """Final merged output for a single keyword."""
 
     keyword: str
-    relevant: bool
-    classification: RelevanceEnum
-    reasoning: str
-    matched_business_fact: str | None = None
-    matched_category: str | None = None
-    matched_brand: str | None = None
-    matched_product: str | None = None
-    provider_confidence: int
-    final_confidence: int
+    relevance: RelevanceEnum
+    reason: str
+    search_intent: str
+    category: str
+    confidence: float
+    recommended_action: str
     provider_used: str
     prompt_version: str
+    processing_method: str = "AI"
+    model: str = ""
+    latency: float = 0.0
 
 
 class AIEngineStatistics(AppBaseModel):

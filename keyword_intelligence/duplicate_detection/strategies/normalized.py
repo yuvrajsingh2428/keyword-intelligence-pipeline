@@ -47,18 +47,21 @@ class NormalizedStrategy(DuplicateDetectionStrategy):
             return []
 
         df = context.data
-        if "keyword" not in df.columns:
+        target_col = (
+            "normalized_keyword" if "normalized_keyword" in df.columns else "keyword"
+        )
+        if target_col not in df.columns:
             return []
 
         # Filter out already resolved keywords
-        mask = ~df["keyword"].isin(exclude_keywords)
+        mask = ~df[target_col].isin(exclude_keywords)
         filtered_df = df[mask].copy()
 
         if filtered_df.empty:
             return []
 
         # Create a normalized column for grouping
-        filtered_df["_norm_kw"] = filtered_df["keyword"].apply(self._normalize)
+        filtered_df["_norm_kw"] = filtered_df[target_col].apply(self._normalize)
 
         # Find groups of identical normalized keywords
         duplicates = filtered_df[
@@ -68,7 +71,7 @@ class NormalizedStrategy(DuplicateDetectionStrategy):
         candidates: list[DuplicateCandidate] = []
 
         for norm_kw, group in duplicates.groupby("_norm_kw"):
-            original_kws = group["keyword"].tolist()
+            original_kws = group[target_col].tolist()
             if len(original_kws) > 1:
                 canonical = original_kws[0]
                 for i in range(1, len(original_kws)):

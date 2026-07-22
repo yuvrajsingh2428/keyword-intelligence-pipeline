@@ -33,4 +33,18 @@ class AIClassificationStage(BaseStage):
 
         self.engine.process(context)
 
+        if (
+            context.has_data
+            and "decision" in context.data.columns
+            and "ai_relevance" in context.data.columns
+        ):
+            processed = (context.data["decision"] == "SEND_TO_AI").sum()
+            successful = context.data["ai_relevance"].notna().sum()
+            fallback = processed - successful
+
+            logger.info("\nAI Classification")
+            logger.info(f"Processed: {processed}")
+            logger.info(f"Successful: {successful}")
+            logger.info(f"Fallback: {fallback}")
+
         return context

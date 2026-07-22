@@ -45,6 +45,36 @@ graph TD
 | **Configuration** | `config/` | Settings, logging config | *(none — leaf dependency)* |
 | **Utilities** | `utils/` | Stateless helper functions | *(none — leaf dependency)* |
 
+## 3. Preprocessing, Normalization & Duplicate Detection Strategy
+
+Data integrity is handled systematically through sequential stages before AI processing begins:
+
+1. **Preprocessing:** Fast vectorized operations to handle null values and standardise data frames.
+2. **Keyword Normalization:** An extensible 12-strategy modular framework that executes before duplicate detection. All strategies are deterministic and execute in milliseconds.
+   * **Case**: Converts text to lowercase.
+   * **Whitespace**: Removes leading/trailing and duplicate spaces.
+   * **Unicode**: Normalizes characters (e.g. café -> cafe) and strips invisibles.
+   * **Punctuation**: Converts hyphens, slashes, and underscores to spaces.
+   * **Dictionary**: Expands standard abbreviations (ergo -> ergonomic).
+   * **Company Dictionary**: Overrides standard definitions with brand-specific mappings.
+   * **Product Token**: Normalizes product names and specific hyphenations.
+   * **Unit**: Collapses spaces before units (2 tb -> 2tb).
+   * **Lemmatization**: Applies fast regex stemming (mice -> mouse, batteries -> battery).
+   * **Numeric**: Strips leading zeros from numeric components.
+   * **Stop Words**: Removes configurable marketing words (best, cheap).
+   * **Token Order**: Optionally sorts tokens alphabetically (Disabled by default to preserve search intent).
+   * **Separation of Concerns:** 
+      * **Why normalization exists:** It standardizes structural variants (e.g., abbreviations, casing, units) prior to semantic matching.
+      * **Why deterministic normalization is separate from duplicate detection:** Normalization cleans data deterministically in $O(N)$ time. Duplicate detection handles relational groupings and fuzzy logic ($O(N \log N)$ or higher). Separating them ensures we don't pollute clustering logic with basic string manipulation.
+      * **Why semantic similarity belongs later:** Heavy NLP algorithms (embeddings, LLMs) are expensive. Deterministic rules scale easily and aggressively reduce the search space before costly semantic models are invoked.
+   * **Stability & Observability:**
+      * **Idempotency:** Every strategy guarantees that $f(f(x)) = f(x)$. Applying normalization multiple times is perfectly safe and will not infinitely mutate the string.
+      * **Trace & Metrics:** Normalization is a destructive process. The engine strictly records which strategies modified a keyword (`normalization_trace`) and tracks hit rates (`NormalizationMetrics`) to ensure complete auditability and ease of debugging without slowing down the pipeline.
+   * **Data Preservation:** The original text is preserved in `original_keyword`, while operations use `normalized_keyword`.
+3. **Exact Matching:** Pandas native `drop_duplicates` instantly removes identical strings.
+4. **Fuzzy Scoring (RapidFuzz):** Calculates Levenshtein distance scores to identify semantic duplicates (e.g., "laptop lenovo" vs "lenovo laptops"). This handles typos and transpositions that normalization alone cannot fix.
+5. **Canonicalization:** Groups similar keywords and elects a "Canonical Keyword" to represent the group, dropping the extraneous variations.
+
 ## Dependency Rules
 
 1. **Config and Utils are leaf dependencies** — they depend on nothing internal.

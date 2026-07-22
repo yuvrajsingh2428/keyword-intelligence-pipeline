@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from keyword_intelligence.ai_intelligence.engine import AIEngine
-from keyword_intelligence.business_context.engine import BusinessContextEngine
 from keyword_intelligence.config.settings import Settings, get_settings
 from keyword_intelligence.core.container import container
 from keyword_intelligence.duplicate_detection.engine import DuplicateDetectionEngine
@@ -44,11 +43,27 @@ def bootstrap() -> None:
         lambda: AIProviderResolver(container.resolve(AIProviderRegistry)),
     )
 
+    from keyword_intelligence.business_context.engine import BusinessContextEngine
+
+    # Provide the dynamic knowledge builder
     container.register(
         BusinessContextEngine,
         lambda: BusinessContextEngine(
-            container.resolve(Settings), container.resolve(AIProviderResolver)
+            settings=container.resolve(Settings),
+            ai_resolver=container.resolve(AIProviderResolver),
         ),
+    )
+    from keyword_intelligence.decision.engine import DecisionEngine
+
+    container.register(
+        DecisionEngine,
+        lambda: DecisionEngine(),
+    )
+    from keyword_intelligence.normalization.engine import NormalizationEngine
+
+    container.register(
+        NormalizationEngine,
+        lambda: NormalizationEngine(container.resolve(Settings)),
     )
     container.register(
         DuplicateDetectionEngine,

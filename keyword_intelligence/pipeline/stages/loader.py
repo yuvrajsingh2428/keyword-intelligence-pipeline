@@ -4,17 +4,11 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import ClassVar
 
-import pandas as pd
-from loguru import logger
-
+from keyword_intelligence.column_resolver.models import ResolutionMethod
+from keyword_intelligence.column_resolver.resolver import ColumnResolver
 from keyword_intelligence.core.constants import StageType
-from keyword_intelligence.core.exceptions import (
-    DataSourceError,
-    FileEncodingError,
-    UnsupportedFileExtensionError,
-)
+from keyword_intelligence.input_loader.loader import InputLoader
 from keyword_intelligence.pipeline.context import PipelineContext
 from keyword_intelligence.pipeline.stage import BaseStage
 
@@ -22,16 +16,21 @@ from keyword_intelligence.pipeline.stage import BaseStage
 class LoaderStage(BaseStage):
     """Loads keyword data from a CSV or Excel file into the PipelineContext.
 
-    Supports reading .csv, .xlsx, and .xls files. For CSVs, it automatically
-    attempts to decode using UTF-8, UTF-8-SIG, and Latin-1.
+    Supports reading .csv, .xlsx, and .xls files transparently.
     """
 
-    SUPPORTED_ENCODINGS: ClassVar[tuple[str, ...]] = ("utf-8", "utf-8-sig", "latin-1")
-    SUPPORTED_EXTENSIONS: ClassVar[set[str]] = {".csv", ".xlsx", ".xls"}
-
-    def __init__(self, file_path: str | Path) -> None:
-        """Initialize the loader with the target file path."""
-        self.file_path = Path(file_path)
+    def __init__(
+        self,
+        file_path: str | Path | bytes,
+        file_name: str | None = None,
+        sheet_name: str | None = None,
+        keyword_column: str | None = None,
+    ) -> None:
+        """Initialize the loader with target file and optional sheet name."""
+        self.file_input = file_path
+        self.file_name = file_name
+        self.sheet_name = sheet_name
+        self.keyword_column = keyword_column
 
     @property
     def stage_type(self) -> StageType:
@@ -41,47 +40,62 @@ class LoaderStage(BaseStage):
     @property
     def stage_version(self) -> str:
         """Return the version of the stage."""
-        return "1.0.0"
+        return "3.0.0"
 
     def execute(self, context: PipelineContext) -> PipelineContext:
-        """Read the file and set the DataFrame in the context.
+        """Read the file and set the DataFrame in the context."""
+        loader = InputLoader()
 
-        Args:
-            context: The pipeline context to populate.
+        # Load the dataframe
+        df = loader.load(
+            self.file_input, file_name=self.file_name, sheet_name=self.sheet_name
+        )
 
-        Returns:
-            The modified pipeline context.
+        # Resolve Column
+        resolver = ColumnResolver()
+        if self.keyword_column:
+            if self.keyword_column not in df.columns:
+                raise ValueError(
+                    f"Explicit keyword column '{self.keyword_column}' not found in file."
+                )
+            mapped_col = self.keyword_column
+            method = ResolutionMethod.MANUAL.value
+            confidence = 100.0
+        else:
+            candidates = resolver.resolve(df.columns.tolist())
+            best = candidates[0]
+            mapped_col = best.original_column
+            method = best.method.value
+            confidence = best.confidence_score
 
-        Raises:
-            UnsupportedFileExtensionError: If the file is not a supported type.
-            FileEncodingError: If the CSV cannot be decoded.
-            DataSourceError: For other read errors (e.g., file not found).
-        """
-        if not self.file_path.exists():
-            raise DataSourceError(f"File not found: {self.file_path}")
+        df = df.rename(columns={mapped_col: "keyword"})
 
-        ext = self.file_path.suffix.lower()
-        if ext not in self.SUPPORTED_EXTENSIONS:
-            raise UnsupportedFileExtensionError(
-                f"Extension '{ext}' not supported. "
-                f"Must be one of {self.SUPPORTED_EXTENSIONS}"
-            )
+        # Calculate checksum and size if possible
+        checksum = ""
+        file_size = 0
+        actual_name = self.file_name or "unknown"
+        ext = ""
 
-        # Generate SHA256 checksum
-        checksum = self._generate_checksum()
-        file_size = self.file_path.stat().st_size
-
-        try:
-            df = self._load_csv() if ext == ".csv" else self._load_excel()
-        except Exception as e:
-            if isinstance(e, (FileEncodingError, UnsupportedFileExtensionError)):
-                raise
-            raise DataSourceError(f"Failed to read file: {e}") from e
+        if isinstance(self.file_input, bytes):
+            checksum = hashlib.sha256(self.file_input).hexdigest()
+            file_size = len(self.file_input)
+            ext = Path(actual_name).suffix.lower()
+        else:
+            path = Path(str(self.file_input))
+            if path.exists():
+                actual_name = path.name
+                ext = path.suffix.lower()
+                file_size = path.stat().st_size
+                sha256 = hashlib.sha256()
+                with open(path, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        sha256.update(chunk)
+                checksum = sha256.hexdigest()
 
         context.data = df
 
         # Populate DatasetMetadata
-        context.dataset_metadata.file_name = self.file_path.name
+        context.dataset_metadata.file_name = actual_name
         context.dataset_metadata.file_size = file_size
         context.dataset_metadata.file_extension = ext
         context.dataset_metadata.checksum = checksum
@@ -89,36 +103,8 @@ class LoaderStage(BaseStage):
         context.dataset_metadata.total_columns = len(df.columns)
         context.dataset_metadata.original_column_names = df.columns.tolist()
 
+        context.dataset_metadata.resolved_keyword_column = mapped_col
+        context.dataset_metadata.resolution_method = method
+        context.dataset_metadata.resolution_confidence = confidence
+
         return context
-
-    def _generate_checksum(self) -> str:
-        """Generate SHA256 checksum of the file."""
-        sha256 = hashlib.sha256()
-        with open(self.file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                sha256.update(chunk)
-        return sha256.hexdigest()
-
-    def _load_csv(self) -> pd.DataFrame:
-        """Attempt to load a CSV using supported encodings."""
-        last_exception: Exception | None = None
-
-        for encoding in self.SUPPORTED_ENCODINGS:
-            try:
-                # We use dtype=str to avoid pandas guessing types incorrectly
-                df = pd.read_csv(self.file_path, encoding=encoding, dtype=str)
-                logger.debug(
-                    f"Successfully decoded {self.file_path.name} with {encoding}"
-                )
-                return df
-            except UnicodeDecodeError as e:
-                last_exception = e
-                logger.debug(f"Failed to decode with {encoding}: {e}")
-
-        raise FileEncodingError(
-            f"Failed to decode {self.file_path.name}. Tried: {self.SUPPORTED_ENCODINGS}"
-        ) from last_exception
-
-    def _load_excel(self) -> pd.DataFrame:
-        """Load an Excel file."""
-        return pd.read_excel(self.file_path, dtype=str)

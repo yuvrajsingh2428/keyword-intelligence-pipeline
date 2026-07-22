@@ -110,6 +110,14 @@ class PipelineRunner:
             registry.register(LoaderStage(tmp_path))
             registry.register(ValidatorStage())
             registry.register(PreprocessorStage())
+            from keyword_intelligence.normalization.engine import NormalizationEngine
+            from keyword_intelligence.pipeline.stages.normalization import (
+                NormalizationStage,
+            )
+
+            registry.register(
+                NormalizationStage(container.resolve(NormalizationEngine))
+            )
             registry.register(
                 BusinessContextStage(
                     container.resolve(BusinessContextEngine),

@@ -1,238 +1,173 @@
-# 🚀 Keyword Intelligence Pipeline
+# Keyword Intelligence Pipeline
 
-An AI-powered keyword intelligence pipeline for automated keyword analysis, clustering, and strategic content recommendations.
+## Overview
 
-[![CI](https://github.com/your-org/keyword-intelligence-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/keyword-intelligence-pipeline/actions/workflows/ci.yml)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Linting: Ruff](https://img.shields.io/badge/linting-ruff-261230.svg)](https://github.com/astral-sh/ruff)
-[![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://mypy-lang.org/)
+The Keyword Intelligence Pipeline is an enterprise-grade, automated keyword analysis tool designed to process raw keyword datasets and filter them based on the strategic business context of a target company. 
 
----
+It solves the problem of manual, time-consuming keyword categorization by combining a high-speed **deterministic pipeline** with an **AI fallback engine**.
 
-## 📋 Overview
+- **Dynamic Business Profile Generation**: The pipeline asynchronously crawls the target company's website (e.g., `apple.com`) to deterministically extract product families, brands, and categories without any hardcoded rules.
+- **Deterministic Pipeline**: Keywords are matched against the dynamic profile using exact, normalized, and fuzzy matching to instantly classify relevant keywords.
+- **AI Fallback**: Ambiguous keywords that fail deterministic matching are seamlessly delegated to a resilient Large Language Model (LLM) classification engine, which categorizes them and provides reasoning.
+- **Output Artifacts**: Produces business-ready Excel workbooks, raw CSVs, and detailed telemetry JSONs.
 
-The Keyword Intelligence Pipeline is an enterprise-grade automated keyword analysis tool. It ingests raw keyword datasets and enriches them by combining deterministic business logic with AI-powered classification. By analyzing a target company's business context, it intelligently filters, deduplicates, and categorizes keywords to surface the most relevant strategic content opportunities.
+## Features
 
-**Current Status**: Production Ready ✅
+- **Automated Website Crawling**: Dynamically extracts Business Context from any retailer.
+- **Intelligent Column Resolution**: Automatically detects keyword columns in input datasets.
+- **Fuzzy Duplicate Detection**: Identifies exact and semantically similar duplicates.
+- **Deterministic Fast-Path**: Eliminates 20-40% of AI requests through high-confidence matching.
+- **Resilient AI Execution**: Features rotating Gemini API keys and OpenRouter fallbacks for maximum uptime.
+- **Comprehensive Reporting**: Generates metrics on pipeline health, stage duration, and LLM reduction percentages.
 
-## ✨ Features
+## Architecture
 
-- **Business Context Extraction**: Automatically understands the target company's industry, products, and services from their domain.
-- **Deterministic Classification**: High-speed, rule-based keyword filtering to reduce unnecessary AI workload.
-- **AI-powered Keyword Classification**: Uses Large Language Models (LLMs) to accurately determine keyword relevance, intent, and semantic clustering.
-- **Duplicate Detection**: Identifies and removes exact and semantically duplicate keywords.
-- **Search Volume Enrichment**: Fetches and aligns keyword search volume and CPC metrics.
-- **Multi-Key Gemini Failover**: Robust AI layer that gracefully handles quota limits by rotating through multiple API keys.
-- **OpenRouter Fallback**: Ensures uninterrupted processing by automatically falling back to OpenRouter if primary providers fail.
-- **Streamlit Dashboard**: A professional, real-time UI for uploading datasets, monitoring pipeline progress, and reviewing results.
-- **Excel & JSON Reporting**: Produces clean, actionable Excel files for end-users and detailed JSON payloads for technical integration.
+The system processes data through a strict pipeline flow:
 
-## 🔄 Pipeline Workflow
-
-Upload Dataset
+```
+Input Dataset
 ↓
 Validation
 ↓
-Business Context
+Normalization
 ↓
 Duplicate Detection
 ↓
-Search Volume
+Business Context
+↓
+Decision Engine
 ↓
 AI Classification
 ↓
-Report Generation
-
-## 🛡️ AI Resilience
-
-The pipeline features a highly resilient AI orchestration layer designed for production reliability:
-- **Automatic Gemini API key rotation**: Seamlessly cycles through up to 5 configured Google Gemini keys.
-- **Graceful quota handling**: Automatically detects `429 Too Many Requests` or quota limits and fails over without interrupting the pipeline.
-- **Automatic OpenRouter fallback**: If all primary Gemini keys are exhausted, the engine delegates unresolved keywords to OpenRouter.
-- **Guaranteed Pipeline Completion**: In the absolute worst-case scenario where all AI providers are down, the pipeline still completes using deterministic matches and produces a valid output.
-
-## 💻 Demo Workflow
-
-1. **Upload**: Provide a CSV/Excel dataset and enter the target company's domain.
-2. **Process**: The pipeline extracts business context and streams provider status directly to the UI.
-3. **Review**: View the comprehensive Pipeline Summary card and classification preview.
-4. **Download**: Export the completed analysis as a full report or filtered relevant keywords in Excel.
-
-## 🏗️ Architecture
-
-```
-keyword_intelligence/
-├── config/               → Settings management, logging configuration
-├── core/                 → Logger factory, exception hierarchy, constants
-├── models/               → Pydantic data models
-├── ai_intelligence/      → AI Provider registry, API integrations
-├── business_context/     → Business context extraction, enrichment, validation
-├── duplicate_detection/  → Canonicalization, keyword deduplication
-├── search_volume/        → Volume fetching, batching
-├── pipeline/             → Pipeline orchestration and stage definitions
-├── reporting/            → Analytics, formatting, and file export
-└── ui/                   → Streamlit presentation layer
+Reporting
 ```
 
-See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation, dependency injection patterns, and future LLM provider interface design.
+## Project Structure
 
-## ⚡ Quick Start
+- `keyword_intelligence/`: Core application logic.
+  - `ai_intelligence/`: AI provider integrations (Gemini, OpenRouter).
+  - `business_context/`: Website crawlers, HTML extractors, and LLM-assisted context enrichment.
+  - `column_resolver/`: Dynamic schema detection.
+  - `duplicate_detection/`: Fuzzy and semantic duplicate strategies.
+  - `pipeline/`: Pipeline orchestration and stage definitions.
+  - `reporting/`: Excel and JSON exporter modules.
+- `tests/`: Unit and integration test suite.
+- `examples/`: Sample input datasets for pipeline testing.
+- `scripts/`: Development scripts.
 
-### Prerequisites
+## Requirements
 
-- Python 3.12+
-- Git
+- **Python**: 3.12+
+- **Virtual Environment**: Recommended (venv)
+- **Dependencies**: pandas, pydantic, beautifulsoup4, google-genai, etc. (See `requirements.txt`)
 
-### Setup
-
-**Windows (PowerShell):**
-
-```powershell
-# Clone the repository
-git clone https://github.com/your-org/keyword-intelligence-pipeline.git
-cd keyword-intelligence-pipeline
-
-# Run the setup script (creates venv, installs deps, configures hooks)
-.\scripts\setup.ps1
-
-# Activate the virtual environment
-.venv\Scripts\Activate.ps1
-
-# Start the application
-streamlit run keyword_intelligence\ui\app.py
-```
-
-**Linux / macOS (Make):**
+## Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/keyword-intelligence-pipeline.git
+
+# Navigate to the directory
 cd keyword-intelligence-pipeline
 
-# Run setup (creates venv, installs deps, configures hooks)
-make setup
+# Create a virtual environment
+python -m venv .venv
 
 # Activate the virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
 source .venv/bin/activate
 
-# Start the application
-make run
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### Environment Variables
+## Environment Variables
 
-Configure your pipeline by copying `.env.example` to `.env`:
+Configure your pipeline by copying the example environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-**Primary Configuration Variables:**
-- `APP_ENV`: Deployment environment (`development`, `staging`, `production`).
-- `LOG_LEVEL`: Application logging level (e.g., `INFO`, `DEBUG`).
-- `GOOGLE_GEMINI_API_KEY_1` to `5`: API keys for the primary Google Gemini provider. The system will automatically rotate through these.
-- `OPENROUTER_API_KEY`: API key for the OpenRouter fallback provider.
-- `OPENROUTER_MODEL`: The specific model to use for the OpenRouter fallback.
+### Required Variables
+- `APP_ENV`: Deployment environment (e.g., `production`, `development`).
+- `LOG_LEVEL`: Output verbosity (e.g., `INFO`, `DEBUG`).
 
-*Note: Never commit your `.env` file or expose your API keys in version control.*
+### Optional Variables (AI Providers)
+At least one API key must be provided if using AI models:
+- `GOOGLE_GEMINI_API_KEY_1` to `GOOGLE_GEMINI_API_KEY_5`: Primary Gemini API keys (the system auto-rotates these to avoid rate limits).
+- `OPEN_ROUTER_API_KEY`: Fallback API key.
+- `OPEN_ROUTER_MODEL`: Model identifier for OpenRouter (default: `google/gemini-2.5-flash`).
 
-## 🛠️ Development
+## Running the Pipeline
 
-### Commands
+Execute the pipeline using the primary CLI runner:
 
-| Action | Makefile | PowerShell |
-|---|---|---|
-| Setup (venv + deps + hooks) | `make setup` | `.\scripts\setup.ps1` |
-| Run Streamlit | `make run` | `.\scripts\run.ps1` |
-| Format code | `make format` | `.\scripts\format.ps1` |
-| Lint code | `make lint` | `.\scripts\lint.ps1` |
-| Type check | `make typecheck` | *(included in lint.ps1)* |
-| Run tests | `make test` | `.\scripts\test.ps1` |
-| All checks | `make check-all` | `.\scripts\lint.ps1; .\scripts\test.ps1` |
+```bash
+python run_pipeline.py \
+  --input examples/demo_dataset.csv \
+  --company Lenovo \
+  --website https://www.lenovo.com/us
+```
 
-### Code Quality
+### CLI Parameters
+- `--input`: (Required) Path to the input `.csv`, `.xls`, or `.xlsx` file.
+- `--company`: (Required) The name of the target company to analyze.
+- `--website`: (Required) The URL of the target company to crawl for business context.
+- `--industry`: (Optional) The industry of the company, aiding LLM enrichment.
+- `--sheet`: (Optional) Specific sheet name to load if passing an Excel file.
+- `--column`: (Optional) Explicitly define the keyword column to bypass dynamic resolution.
+- `--output-dir`: (Optional) Directory to save all artifacts (default: `output`).
 
-This project enforces code quality through:
+## Example
 
-- **[Black](https://github.com/psf/black)** — Opinionated code formatter (line length: 88)
-- **[Ruff](https://github.com/astral-sh/ruff)** — Fast Python linter with Google docstring convention
-- **[MyPy](https://mypy-lang.org/)** — Static type checker in strict mode
-- **[pre-commit](https://pre-commit.com/)** — Git hooks run formatters and linters before every commit
+### Input (`demo_dataset.csv`)
+| Keyword | Search Volume |
+|---------|---------------|
+| ThinkPad X1 Carbon | 12500 |
+| Wedding Dress | 75000 |
 
-All tools are configured in [`pyproject.toml`](pyproject.toml).
+### Output
+The pipeline determines that "ThinkPad X1 Carbon" matches Lenovo's deterministic product families (`Relevant = True`), while "Wedding Dress" is rejected by the AI classification engine (`Relevant = False`).
 
-### Testing
+## Output Files
+
+All outputs are saved to a timestamped folder inside the `output/` directory (e.g., `output/2026-07-22_14-30-00/`).
+
+- **`filtered_keywords.xlsx`**: A business-ready Excel workbook containing final results, visual pipeline summaries, AI decision logs, and full debug data.
+- **`filtered_keywords.csv`**: A clean CSV of the final dataset, suitable for BI tool ingestion.
+- **`filtered_keywords_debug.csv`**: The raw dataset containing all internal telemetry, confidence scores, and normalization traces.
+- **`duplicate_keywords.csv`**: (Generated if duplicates found) A list of keywords removed during the deduplication phase.
+- **`execution_summary.json`**: High-level execution metrics (Rows Read, AI Reduction %, Final Runtime).
+- **`pipeline_metrics.json`**: Detailed telemetry on AI token usage, fallback activations, and match counts.
+- **`stage_metrics.json`**: Execution durations for every stage in the pipeline (Loader, Validator, Preprocessor, etc.).
+- **`pipeline_health.json`**: Overall system health, capturing any internal anomalies or warnings.
+
+## Cache
+
+To reduce redundant website crawling and expensive LLM calls, the Business Context Engine leverages a disk cache.
+
+- **Location**: `cache/business_profiles/`
+- **How it works**: Profiles are cached using the key `{company}_{website}.json`. If a pipeline is run against `Lenovo` and `www.lenovo.com` twice in 24 hours, the second run bypasses the crawler and LLM enrichment completely.
+- **How to clear it**: Simply delete the contents of the `cache/` directory or run `rm -rf cache/*`.
+
+## Testing
+
+The project uses `pytest` for all unit and integration testing.
 
 ```bash
 # Run all tests
-pytest tests/ -v
+python -m pytest tests/ -v
 
-# Run with coverage
-pytest tests/ -v --cov=keyword_intelligence --cov-report=term-missing
-
-# Run only smoke tests
-pytest tests/ -v -m smoke
-
-# Run only settings tests
-pytest tests/ -v -m settings
+# Run only integration tests
+python -m pytest tests/integration/ -v
 ```
 
-### VS Code Integration
+## Troubleshooting
 
-The project includes optional VS Code configuration in `.vscode/`:
-
-- **settings.json** — Python interpreter, formatter, linter settings
-- **extensions.json** — Recommended extensions
-- **launch.json** — Debug configurations for Streamlit and pytest
-
-Install recommended extensions when prompted by VS Code for the best development experience.
-
-## 📁 Project Structure
-
-```
-keyword-intelligence-pipeline/
-├── app.py                      # Streamlit entrypoint
-├── pyproject.toml              # Project config + tool settings
-├── requirements.txt            # Runtime dependencies
-├── requirements-dev.txt        # Development dependencies
-├── .env.example                # Environment variable template
-├── Makefile                    # Developer commands (Make)
-├── scripts/                    # Developer commands (PowerShell)
-├── .github/workflows/ci.yml   # CI pipeline
-├── .vscode/                    # VS Code workspace config
-├── docs/                       # Project documentation
-│   ├── architecture.md         # System architecture
-│   ├── roadmap.md              # Phase delivery plan
-│   └── decision-log.md        # Architecture decisions
-├── assets/                     # Static assets
-├── logs/                       # Runtime log output
-├── keyword_intelligence/       # Application source code
-│   ├── config/                 # Settings + logging config
-│   ├── core/                   # Logger, exceptions
-│   ├── models/                 # Pydantic data models
-│   ├── services/               # Service integrations
-│   ├── pipeline/               # Pipeline orchestration
-│   ├── utils/                  # Helper functions
-│   └── ui/                     # Streamlit pages
-└── tests/                      # Test suite
-    ├── fixtures/               # Test data
-    ├── test_smoke.py           # Smoke tests
-    └── test_settings.py        # Configuration tests
-```
-
-## 🗺️ Roadmap
-
-| Phase | Focus | Status |
-|---|---|---|
-| **Phase 1** | Project Foundation | ✅ Complete |
-| **Phase 2** | AI Integration (LLM providers) | ✅ Complete |
-| **Phase 3** | Data Pipeline (ingestion, caching) | ✅ Complete |
-| **Phase 4** | Analysis & Reporting | ✅ Complete |
-| **Phase 5** | Production Hardening | ✅ Complete |
-
-See [docs/roadmap.md](docs/roadmap.md) for detailed phase descriptions.
-
-## 📄 License
-
-This project is licensed under the MIT License.
+- **Missing API key**: Ensure `.env` is created and `GOOGLE_GEMINI_API_KEY_1` is populated. If you lack keys, set `AI_PROVIDER=mock` in `.env` for testing.
+- **Website unavailable**: If the crawler hits a 403/404 on the target website, the pipeline will issue a warning and gracefully degrade, utilizing only the provided CLI arguments to build a minimal Business Profile.
+- **Empty dataset**: Ensure your CSV/Excel file is formatted correctly. The pipeline will automatically attempt to find the keyword column via fuzzy matching, but if it fails, pass `--column YourColumnName`.
+- **Rate limits (429)**: The pipeline automatically rotates through Gemini keys. If all fail, it delegates to OpenRouter. Ensure multiple keys are populated in your `.env` for large datasets.

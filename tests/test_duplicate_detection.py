@@ -79,10 +79,15 @@ def test_engine_process_end_to_end(engine, sample_context):
     )  # normalized, fuzzy (exact matches are dropped from dataframe but don't add new nodes to the string-based graph)
     assert "content marketing" not in group.duplicates
 
-    # Original dataframe should have been filtered
-    assert len(sample_context.data) == 2  # canonical + distinct
+    # Pipeline preserves all rows, but marks duplicates in 'status'
+    assert len(sample_context.data) == 5
+    assert (sample_context.data["status"] == "ACTIVE").sum() == 2
+    assert (sample_context.data["status"] == "DUPLICATE").sum() == 3
     assert sample_context.data["keyword"].tolist() == [
         "seo services",
+        "seo services",
+        "SEO  Services",
+        "seoo services",
         "content marketing",
     ]
 

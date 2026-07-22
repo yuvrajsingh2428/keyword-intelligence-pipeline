@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import io
-
 import pandas as pd
 import streamlit as st
 
 from keyword_intelligence.core.bootstrap import bootstrap
+from keyword_intelligence.interfaces.streamlit_runner import StreamlitRunner
 from keyword_intelligence.pipeline.context import PipelineContext
-from keyword_intelligence.reporting.models import ReportResult
-from keyword_intelligence.ui.services.pipeline_runner import PipelineRunner
 from keyword_intelligence.ui.themes.theme import inject_css
 
 # Must be the first Streamlit command
@@ -42,15 +39,15 @@ def main() -> None:
     st.markdown("Automated keyword analysis, classification, and clustering.")
     st.markdown("---")
 
-    import pickle
     import os
+    import pickle
 
     STATE_FILE = ".last_run.pkl"
 
     # Initialize state
     if "is_processing" not in st.session_state:
         st.session_state.is_processing = False
-    
+
     # Attempt to load from disk on fresh session
     if "result_context" not in st.session_state:
         if os.path.exists(STATE_FILE):
@@ -89,7 +86,67 @@ def main() -> None:
         disabled=st.session_state.is_processing,
     )
 
-    can_run = bool(company_name and website and uploaded_file)
+    selected_sheet = None
+    keyword_column = None
+    if uploaded_file is not None:
+        file_ext = uploaded_file.name.split(".")[-1].lower()
+        from keyword_intelligence.input_loader.loader import InputLoader
+
+        loader = InputLoader()
+
+        if file_ext in ["xlsx", "xls"]:
+            try:
+                sheets = loader.get_sheet_names(uploaded_file.getvalue())
+                if len(sheets) > 1:
+                    selected_sheet = st.selectbox(
+                        "Select Sheet",
+                        options=sheets,
+                        disabled=st.session_state.is_processing,
+                    )
+                elif sheets:
+                    selected_sheet = sheets[0]
+            except Exception as e:
+                st.error(f"Failed to read Excel sheets: {e}")
+
+        # Extract columns and resolve keyword column
+        try:
+            from keyword_intelligence.column_resolver.resolver import ColumnResolver
+
+            columns = loader.get_columns(
+                uploaded_file.getvalue(),
+                file_name=uploaded_file.name,
+                sheet_name=selected_sheet,
+            )
+            resolver = ColumnResolver()
+            candidates = resolver.resolve(columns)
+
+            # Use top candidate by default
+            top_col = candidates[0].original_column
+
+            # If multiple candidates, allow user to choose
+            if len(candidates) > 1:
+                # Build option labels including confidence
+                options = [c.original_column for c in candidates]
+                format_func = lambda col: next(
+                    f"{c.original_column} (Confidence: {c.confidence_score}%, Method: {c.method.value})"
+                    for c in candidates
+                    if c.original_column == col
+                )
+                keyword_column = st.selectbox(
+                    "Select Keyword Column",
+                    options=options,
+                    index=0,
+                    format_func=format_func,
+                    disabled=st.session_state.is_processing,
+                )
+            else:
+                keyword_column = top_col
+
+        except Exception as e:
+            st.error(f"Failed to resolve keyword column: {e}")
+            keyword_column = None
+
+    can_run = bool(company_name and website and uploaded_file and keyword_column)
 
     if st.button(
         "🚀 Run Pipeline",
@@ -102,6 +159,8 @@ def main() -> None:
             st.session_state.file_name = uploaded_file.name
             st.session_state.company_name = company_name
             st.session_state.website = website
+            st.session_state.sheet_name = selected_sheet
+            st.session_state.keyword_column = keyword_column
             st.session_state.result_context = None
             st.session_state.result_report = None
             st.rerun()
@@ -134,7 +193,7 @@ def main() -> None:
                 filter=lambda record: "keyword_intelligence" in str(record["name"]),
             )
 
-            runner = PipelineRunner()
+            runner = StreamlitRunner()
             try:
                 runner.run(
                     file_bytes=st.session_state.file_bytes,
@@ -142,23 +201,32 @@ def main() -> None:
                     company_name=st.session_state.company_name,
                     website=st.session_state.website,
                     industry="",
+                    sheet_name=st.session_state.get("sheet_name"),
+                    keyword_column=st.session_state.get("keyword_column"),
                 )
 
                 st.session_state.result_context = runner.context
                 st.session_state.result_report = runner.report
                 st.session_state.is_processing = False
-                
+
                 # Save state to disk for persistence across browser refreshes
                 try:
                     with open(STATE_FILE, "wb") as f:
-                        pickle.dump({
-                            "result_context": runner.context,
-                            "result_report": runner.report,
-                            "file_bytes": st.session_state.file_bytes,
-                            "file_name": st.session_state.file_name,
-                            "company_name": st.session_state.company_name,
-                            "website": st.session_state.website,
-                        }, f)
+                        pickle.dump(
+                            {
+                                "result_context": runner.context,
+                                "result_report": runner.report,
+                                "file_bytes": st.session_state.file_bytes,
+                                "file_name": st.session_state.file_name,
+                                "company_name": st.session_state.company_name,
+                                "website": st.session_state.website,
+                                "sheet_name": st.session_state.get("sheet_name"),
+                                "keyword_column": st.session_state.get(
+                                    "keyword_column"
+                                ),
+                            },
+                            f,
+                        )
                 except Exception:
                     pass
 
@@ -177,83 +245,99 @@ def main() -> None:
                 logger.remove(logger_id)
 
     # 3. Results Section
-    if st.session_state.result_context and st.session_state.result_report:
+    if st.session_state.result_context and hasattr(
+        st.session_state.result_context, "execution_id"
+    ):
         st.markdown("---")
-        st.subheader("3. Results Summary")
+        st.subheader("3. Execution Summary")
 
         context: PipelineContext = st.session_state.result_context
-        report: ReportResult = st.session_state.result_report
-
-        stats = report.analytics.dataset
-        rel = report.analytics.relevance
-
-        # Pipeline Summary Card
-        st.markdown("#### Pipeline Summary")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Total Keywords", f"{stats.total_keywords:,}")
-        m2.metric("Relevant Keywords", f"{rel.relevant:,}")
-        m3.metric("Irrelevant Keywords", f"{rel.irrelevant:,}")
+        # Use PipelineContext and PipelineResult since we bypass old ReportingStage
+        result_file = None
+        for file in getattr(context, "output_file_locations", []):
+            if file.endswith("filtered_keywords.csv"):
+                result_file = file
 
         df = context.data
-        ai_classified = (
-            df["ai_confidence"].notna().sum() if "ai_confidence" in df.columns else 0
-        )
-        det_matches = len(df) - ai_classified
 
-        m4, m5, m6 = st.columns(3)
-        m4.metric("AI Classified", f"{ai_classified:,}")
-        m5.metric("Deterministic Matches", f"{det_matches:,}")
-        m6.metric(
-            "Total Processing Time",
-            f"{report.pipeline.timing.total_execution_time_ms / 1000:.1f}s",
+        decisions = (
+            df["decision"].value_counts().to_dict() if "decision" in df.columns else {}
+        )
+        keep_count = decisions.get("KEEP", 0)
+        drop_count = decisions.get("DROP", 0)
+        review_count = decisions.get("REVIEW", 0)
+        send_to_ai_count = decisions.get("SEND_TO_AI", 0)
+
+        # Pipeline Summary Card
+        st.markdown("#### Pipeline Observability")
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Total Processed", f"{len(df):,}")
+        m2.metric("KEEP", f"{keep_count:,}")
+        m3.metric("DROP", f"{drop_count:,}")
+        m4.metric("REVIEW", f"{review_count:,}")
+        m5.metric("SEND_TO_AI", f"{send_to_ai_count:,}")
+
+        relevant_count = df["relevant"].sum() if "relevant" in df.columns else 0
+        irrelevant_count = len(df) - relevant_count
+
+        duplicates = (
+            df["duplicate_group"].nunique() if "duplicate_group" in df.columns else 0
         )
 
-        filtered_count = stats.duplicate_keywords + rel.irrelevant
+        m6, m7, m8, m9 = st.columns(4)
+        m6.metric("Relevant", f"{relevant_count:,}")
+        m7.metric("Irrelevant", f"{irrelevant_count:,}")
+        m8.metric("Duplicates Grouped", f"{duplicates:,}")
+        m9.metric(
+            "Total Execution Time",
+            f"{context.pipeline_metrics.total_time_ms / 1000:.2f}s",
+        )
+
         st.success(
-            f"Pipeline Completed Successfully. Processed: {stats.total_keywords}, Relevant: {rel.relevant}, Filtered: {filtered_count}"
+            f"Pipeline Execution Complete. {len(context.errors)} errors, {len(context.warnings)} warnings."
         )
+
+        st.markdown("#### Stage Timings")
+        stage_data = []
+        for stage_metric in context.stage_metrics:
+            stage_data.append(
+                {
+                    "Stage": stage_metric.stage_name,
+                    "Duration (ms)": round(stage_metric.processing_time_ms, 2),
+                    "Input Rows": stage_metric.rows_loaded,
+                    "Output Rows": stage_metric.rows_output,
+                    "Success": stage_metric.success,
+                }
+            )
+        st.dataframe(pd.DataFrame(stage_data), use_container_width=True)
 
         st.markdown("#### Keyword Classification Preview")
-        st.dataframe(context.data.head(20), use_container_width=True)
+        st.dataframe(df.head(20), use_container_width=True)
 
         st.markdown("#### Downloads")
         dl_col1, dl_col2 = st.columns(2)
 
-        # Create Excel Bytes in-memory for download
-        buf_all = io.BytesIO()
-        buf_rel = io.BytesIO()
+        csv_all = df.to_csv(index=False).encode("utf-8")
 
-        with pd.ExcelWriter(buf_all, engine="openpyxl") as w:
-            df.to_excel(w, sheet_name="All Keywords", index=False)
-
-        with pd.ExcelWriter(buf_rel, engine="openpyxl") as w:
-            df_rel = df
-            if "business_relevance" in df_rel.columns:
-                df_rel = df_rel[
-                    df_rel["business_relevance"].astype(str).str.lower() == "relevant"
-                ]
-            elif "relevance" in df_rel.columns:
-                df_rel = df_rel[
-                    df_rel["relevance"].astype(str).str.lower() == "relevant"
-                ]
-            df_rel.to_excel(w, sheet_name="Relevant Keywords", index=False)
+        df_relevant = df[df["relevant"] == True] if "relevant" in df.columns else df
+        csv_relevant = df_relevant.to_csv(index=False).encode("utf-8")
 
         with dl_col1:
             st.download_button(
-                "⬇️ Download Complete Report",
-                data=buf_all.getvalue(),
-                file_name="complete_report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "⬇️ Download Complete Report (CSV)",
+                data=csv_all,
+                file_name="complete_report.csv",
+                mime="text/csv",
                 use_container_width=True,
                 type="secondary",
             )
 
         with dl_col2:
             st.download_button(
-                "⬇️ Download Relevant Keywords Only",
-                data=buf_rel.getvalue(),
-                file_name="relevant_keywords.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "⬇️ Download Relevant Keywords Only (CSV)",
+                data=csv_relevant,
+                file_name="relevant_keywords.csv",
+                mime="text/csv",
                 use_container_width=True,
                 type="primary",
             )

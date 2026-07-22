@@ -44,7 +44,6 @@ class DeterministicFilter:
         self.technologies = {t.lower() for t in profile.technologies}
         self.segments = {s.lower() for s in profile.customer_segments}
         self.keywords = {k.lower() for k in profile.important_keywords}
-        self.negatives = {n.lower() for n in profile.negative_keywords}
 
         self.taxonomy = {}
         for parent, children in self.facts.taxonomy.items():
@@ -59,15 +58,6 @@ class DeterministicFilter:
             Tuple of (RelevanceEnum, Confidence (0-100), Reason string).
         """
         kw = keyword.lower().strip()
-
-        # 1. Negative match
-        for neg in self.negatives:
-            if re.search(r"\b" + re.escape(neg) + r"\b", kw):
-                return (
-                    RelevanceEnum.IRRELEVANT,
-                    self.CONF_NEGATIVE,
-                    f"Matches known negative: {neg}",
-                )
 
         # 2. Company match
         if self.company_name in kw:

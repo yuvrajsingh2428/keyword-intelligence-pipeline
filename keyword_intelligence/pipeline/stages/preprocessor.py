@@ -41,14 +41,8 @@ class PreprocessorStage(BaseStage):
 
         df["keyword"] = df["keyword"].fillna("")
 
-        if context.settings.enable_lowercase:
-            df["keyword"] = df["keyword"].str.lower()
-
-        if context.settings.enable_trim_whitespace:
-            df["keyword"] = df["keyword"].str.strip()
-
-        if context.settings.enable_normalize_spaces:
-            df["keyword"] = df["keyword"].str.replace(r"\s+", " ", regex=True)
+        # Normalization (lowercase, whitespace, punctuation, abbreviation expansion)
+        # is now handled by the NormalizationStage which runs after PreprocessorStage.
 
         if context.settings.enable_remove_empty_rows:
             df = df[df["keyword"] != ""]

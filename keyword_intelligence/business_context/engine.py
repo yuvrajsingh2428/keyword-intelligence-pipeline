@@ -11,7 +11,7 @@ from keyword_intelligence.business_context.cache import BusinessProfileCache
 from keyword_intelligence.business_context.collectors.website import WebsiteCollector
 from keyword_intelligence.business_context.enricher import BusinessFactsEnricher
 from keyword_intelligence.business_context.extractor import StructuredExtractor
-from keyword_intelligence.business_context.generator import BusinessProfileGenerator
+from keyword_intelligence.business_context.llm_enricher import LLMEnricher
 from keyword_intelligence.business_context.models import BusinessProfile
 from keyword_intelligence.business_context.validator import BusinessFactsValidator
 from keyword_intelligence.config.settings import Settings
@@ -31,7 +31,7 @@ class BusinessContextEngine:
         self.extractor = StructuredExtractor()
         self.enricher = BusinessFactsEnricher(settings)
         self.validator = BusinessFactsValidator()
-        self.generator = BusinessProfileGenerator(settings, ai_resolver)
+        self.llm_enricher = LLMEnricher(settings, ai_resolver)
 
     def process(
         self,
@@ -89,8 +89,8 @@ class BusinessContextEngine:
                 f"Number of Services: {len(draft.business_facts.services)}"
             )
 
-        # 3. Generate Full Profile
-        profile = self.generator.generate(draft, contents)
+        # 3. Enrich profile with missing metadata via LLM
+        profile = self.llm_enricher.generate(draft, contents)
 
         logger.info(
             f"BusinessProfile Enriched: Industry: {profile.industry}, Product Families: {len(profile.business_facts.product_families)}, Technologies: {len(profile.technologies)}, Customer Segments: {len(profile.customer_segments)}"

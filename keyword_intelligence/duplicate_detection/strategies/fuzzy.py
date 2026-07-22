@@ -34,12 +34,15 @@ class FuzzyStrategy(DuplicateDetectionStrategy):
             return []
 
         df = context.data
-        if "keyword" not in df.columns:
+        target_col = (
+            "normalized_keyword" if "normalized_keyword" in df.columns else "keyword"
+        )
+        if target_col not in df.columns:
             return []
 
         # Filter out already resolved keywords
-        mask = ~df["keyword"].isin(exclude_keywords)
-        keywords = df.loc[mask, "keyword"].tolist()
+        mask = ~df[target_col].isin(exclude_keywords)
+        keywords = df.loc[mask, target_col].tolist()
 
         if not keywords:
             return []

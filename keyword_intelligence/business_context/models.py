@@ -1,8 +1,6 @@
-"""Business Context models."""
+"""Business Context Enrichment models."""
 
 from __future__ import annotations
-
-from datetime import datetime
 
 from pydantic import Field
 
@@ -10,7 +8,7 @@ from keyword_intelligence.models.base import AppBaseModel
 
 
 class EntityEvidence(AppBaseModel):
-    """Deterministically extracted entity with evidence-based confidence."""
+    """Evidence for a detected entity from the website."""
 
     entity: str
     entity_type: str
@@ -19,7 +17,7 @@ class EntityEvidence(AppBaseModel):
 
 
 class Relationship(AppBaseModel):
-    """A simple relationship between two entities."""
+    """Relationship between two entities."""
 
     source: str
     relation_type: str
@@ -27,61 +25,65 @@ class Relationship(AppBaseModel):
 
 
 class BusinessFacts(AppBaseModel):
-    """Deterministically extracted facts from the retailer website."""
+    """Extracted factual taxonomy of a business."""
 
-    brands: list[EntityEvidence] = Field(default_factory=list)
-    product_families: list[EntityEvidence] = Field(default_factory=list)
-    categories: list[EntityEvidence] = Field(default_factory=list)
     products: list[EntityEvidence] = Field(default_factory=list)
+    brands: list[EntityEvidence] = Field(default_factory=list)
+    categories: list[EntityEvidence] = Field(default_factory=list)
     services: list[EntityEvidence] = Field(default_factory=list)
-
-    # Simple in-memory relationships (e.g. ThinkPad belongs_to Laptop)
+    product_families: list[EntityEvidence] = Field(default_factory=list)
     relationships: list[Relationship] = Field(default_factory=list)
-
-    # Hierarchical taxonomy: parent_category -> [child_categories]
     taxonomy: dict[str, list[str]] = Field(default_factory=dict)
-
     aliases: dict[str, str] = Field(default_factory=dict)
     synonyms: dict[str, list[str]] = Field(default_factory=dict)
 
 
-class ProfileMetadata(AppBaseModel):
-    """Metadata enabling cache invalidation and reproducibility."""
+class CollectedContent(AppBaseModel):
+    """Raw content collected from a webpage."""
 
-    profile_version: str = "2.0.0"
-    generator_version: str = "2.0.0"
-    collector_version: str = "2.0.0"
+    source_url: str
+    title: str
+    clean_text: str
+    html: str
+
+
+class ProfileMetadata(AppBaseModel):
+    """Metadata about the generated profile."""
+
+    source_pages: list[str] = Field(default_factory=list)
     llm_model: str = ""
     quality_score: float = 0.0
-    source_pages: list[str] = Field(default_factory=list)
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class BusinessProfile(AppBaseModel):
-    """The canonical representation of the business, split into deterministic and LLM layers."""
+    """The fully generated dynamic company profile."""
 
     company_name: str
     website: str
-
-    # LLM Enriched Knowledge
     industry: str = ""
     business_description: str = ""
-    customer_segments: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
+    customer_segments: list[str] = Field(default_factory=list)
     important_keywords: list[str] = Field(default_factory=list)
-    negative_keywords: list[str] = Field(default_factory=list)
     business_concepts: list[str] = Field(default_factory=list)
-
-    # Deterministic Business Facts
     business_facts: BusinessFacts = Field(default_factory=BusinessFacts)
-
     metadata: ProfileMetadata = Field(default_factory=ProfileMetadata)
 
 
-class CollectedContent(AppBaseModel):
-    """Raw data collected from a provider."""
+class KeywordBusinessContext(AppBaseModel):
+    """The enriched business context for a single keyword."""
 
-    source_url: str
-    title: str = ""
-    clean_text: str = ""
-    html: str = ""
+    keyword: str
+    company: str | None = None
+    brands_detected: list[str] = Field(default_factory=list)
+    primary_brand: str | None = None
+    secondary_brand: str | None = None
+    brand: str | None = None
+    category: str | None = None
+    product_family: str | None = None
+    domain: str | None = None
+    retail_relevance: bool | None = None
+    search_intent: str | None = None
+    deterministic_reason: str | None = None
+    business_confidence: float = 0.0
+    requires_ai: bool = True

@@ -110,20 +110,18 @@ class MockAIProvider(AIProvider):
             rel_idx = hash_val % len(RelevanceEnum)
             classification = list(RelevanceEnum)[rel_idx]
             relevant = classification == RelevanceEnum.RELEVANT
-
-            confidence = 50 + (hash_val % 51)  # 50 to 100
+            relevance_str = classification.value
+            confidence = round(0.50 + ((hash_val % 51) / 100.0), 2)  # 0.50 to 1.00
 
             results.append(
                 {
                     "keyword": kw,
-                    "relevant": relevant,
-                    "classification": classification.value,
+                    "relevance": relevance_str,
+                    "reason": "Mock semantic reasoning based on hash.",
+                    "search_intent": "informational",
+                    "category": "Laptop" if relevant else "Unknown",
                     "confidence": confidence,
-                    "reasoning": "Mock semantic reasoning based on hash.",
-                    "matched_business_fact": "Mock Fact" if relevant else None,
-                    "matched_category": "Laptop" if relevant else None,
-                    "matched_brand": "ThinkPad" if relevant else None,
-                    "matched_product": None,
+                    "recommended_action": "Target" if relevant else "Ignore",
                 }
             )
 

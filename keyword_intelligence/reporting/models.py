@@ -7,7 +7,6 @@ from typing import Any
 
 from pydantic import Field
 
-from keyword_intelligence.business_context.models import BusinessProfile
 from keyword_intelligence.models.base import AppBaseModel
 
 # ---------------------------------------------------------------------------
@@ -177,7 +176,7 @@ class ReportResult(AppBaseModel):
     executive: ExecutiveSummary = Field(
         default_factory=ExecutiveSummary,
     )
-    business_profile: BusinessProfile | None = None
+    business_profile: Any | None = None
     technical: TechnicalSummary = Field(
         default_factory=TechnicalSummary,
     )

@@ -31,20 +31,25 @@ class ExactStrategy(DuplicateDetectionStrategy):
             return []
 
         df = context.data
-        if "keyword" not in df.columns:
+        target_col = (
+            "normalized_keyword" if "normalized_keyword" in df.columns else "keyword"
+        )
+        if target_col not in df.columns:
             return []
 
         # Filter out already resolved keywords
-        mask = ~df["keyword"].isin(exclude_keywords)
+        mask = ~df[target_col].isin(exclude_keywords)
         filtered_df = df[mask]
 
         # Use pandas grouping to find exact matches instantly
-        duplicates = filtered_df[filtered_df.duplicated(subset=["keyword"], keep=False)]
+        duplicates = filtered_df[
+            filtered_df.duplicated(subset=[target_col], keep=False)
+        ]
 
         candidates: list[DuplicateCandidate] = []
 
         # Group identical keywords
-        for keyword, group in duplicates.groupby("keyword"):
+        for keyword, group in duplicates.groupby(target_col):
             # Because it's an exact match, they are all the same keyword.
             # We pair the first one as 'original' and the rest as 'matched'.
             kw_str = str(keyword)

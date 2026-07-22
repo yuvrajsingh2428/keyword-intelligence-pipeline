@@ -92,7 +92,10 @@ class OpenRouterProvider(AIProvider):
 
         try:
             response = requests.post(
-                self.base_url, headers=headers, json=payload, timeout=self.timeout  # type: ignore
+                self.base_url,
+                headers=headers,
+                json=payload,
+                timeout=self.timeout,  # type: ignore
             )
             response.raise_for_status()
 

@@ -65,3 +65,11 @@ logs/*
 # === Distribution ===
 *.tar.gz
 *.whl
+
+
+#result
+output/
+ 
+# === Application ===
+cache/
+generated_reports/

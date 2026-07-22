@@ -83,10 +83,18 @@ class DuplicateDetectionEngine:
         # 4. Filter DataFrame
         duplicates_removed = 0
         if context.has_data:
+            if "status" not in context.data.columns:
+                context.data["status"] = "ACTIVE"
+
             # 4a. Exact duplicates
-            initial_len = len(context.data)
-            context.data.drop_duplicates(subset=["keyword"], keep="first", inplace=True)
-            exact_removed = initial_len - len(context.data)
+            target_col_exact = (
+                "normalized_keyword"
+                if "normalized_keyword" in context.data.columns
+                else "keyword"
+            )
+            is_dup = context.data.duplicated(subset=[target_col_exact], keep="first")
+            context.data.loc[is_dup, "status"] = "DUPLICATE"
+            exact_removed = is_dup.sum()
 
             # 4b. Normalized/Fuzzy duplicates
             to_remove = set()
@@ -95,11 +103,16 @@ class DuplicateDetectionEngine:
                     if dup != group.canonical_keyword:
                         to_remove.add(dup)
 
-            mask = ~context.data["keyword"].isin(to_remove)
-            context.data = context.data.loc[mask].copy()
+            target_col = (
+                "normalized_keyword"
+                if "normalized_keyword" in context.data.columns
+                else "keyword"
+            )
+            mask = context.data[target_col].isin(to_remove)
+            context.data.loc[mask, "status"] = "DUPLICATE"
 
             duplicates_removed = exact_removed + len(to_remove)
-            logger.info(f"Removed {duplicates_removed} duplicates from context.")
+            logger.info(f"Marked {duplicates_removed} duplicates in context.")
 
         total_time_ms = (time.perf_counter() - start_time) * 1000
 

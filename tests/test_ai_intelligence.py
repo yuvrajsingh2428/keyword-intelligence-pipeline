@@ -74,8 +74,8 @@ def test_mock_deterministic_generation(engine: AIEngine, settings: Settings) -> 
 
     engine.process(context)
 
-    assert "business_relevance" in context.data.columns
-    assert "business_reason" in context.data.columns
+    assert "ai_relevance" in context.data.columns
+    assert "ai_reason" in context.data.columns
 
     # Run again on new context
     context2 = PipelineContext(settings)
@@ -88,14 +88,8 @@ def test_mock_deterministic_generation(engine: AIEngine, settings: Settings) -> 
     engine.process(context2)
 
     # Assert deterministic equality
-    assert (
-        context.data.iloc[0]["business_relevance"]
-        == context2.data.iloc[0]["business_relevance"]
-    )
-    assert (
-        context.data.iloc[1]["business_relevance"]
-        == context2.data.iloc[1]["business_relevance"]
-    )
+    assert context.data.iloc[0]["ai_relevance"] == context2.data.iloc[0]["ai_relevance"]
+    assert context.data.iloc[1]["ai_relevance"] == context2.data.iloc[1]["ai_relevance"]
 
 
 def test_ai_cache_hits(engine: AIEngine, settings: Settings) -> None:
@@ -124,7 +118,7 @@ def test_ai_cache_hits(engine: AIEngine, settings: Settings) -> None:
     # except looking at the returned context or stats.
     # We would need to extract stats if we exposed them in the engine return.
     # Since Engine process() returns None and mutates context, we can check if it worked.
-    assert not context2.data["business_relevance"].isna().any()
+    assert not context2.data["ai_relevance"].isna().any()
 
 
 def test_malformed_responses_handled_gracefully(
@@ -138,7 +132,7 @@ def test_malformed_responses_handled_gracefully(
     engine.process(context)
 
     # Should safely fail without crashing pipeline, and leave it NaN/None
-    assert pd.isna(context.data["business_relevance"].iloc[0])
+    assert pd.isna(context.data["ai_relevance"].iloc[0])
 
 
 def test_batch_splitting(engine: AIEngine, settings: Settings) -> None:
@@ -151,7 +145,7 @@ def test_batch_splitting(engine: AIEngine, settings: Settings) -> None:
     engine.process(context)
 
     # Should have batched 100, 100, 50
-    assert not context.data["business_relevance"].isna().any()
+    assert not context.data["ai_relevance"].isna().any()
     assert len(context.data) == 250
 
 
@@ -172,4 +166,4 @@ def test_engine_50k_benchmark(settings: Settings, registry: AIProviderRegistry) 
     # Total time should be well under 10 seconds.
     assert duration < 10.0, f"AI Benchmark took too long: {duration:.2f}s"
     assert len(context.data) == 50000
-    assert not context.data["business_relevance"].isna().any()
+    assert not context.data["ai_relevance"].isna().any()

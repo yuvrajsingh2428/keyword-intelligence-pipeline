@@ -81,26 +81,19 @@ class AIEngine:
                         provider=p,
                         schema_version="1.0",
                         system_prompt=(
-                            "You are an expert AI Business & SEO analyst. "
+                            "You are an expert AI Business & SEO analyst for Lenovo US. "
                             "Respond ONLY with a JSON array of objects. Do not output markdown blocks or conversational text. "
                             "Each object must STRICTLY follow this schema:\n"
                             "{{\n"
                             '  "keyword": "...",\n'
-                            '  "relevant": true or false,\n'
-                            '  "classification": "RELEVANT" or "IRRELEVANT",\n'
-                            '  "confidence": <int 0-100>,\n'
-                            '  "reasoning": "...",\n'
-                            '  "matched_business_fact": "...",\n'
-                            '  "matched_category": "...",\n'
-                            '  "matched_brand": "...",\n'
-                            '  "matched_product": "..."\n'
+                            '  "relevance": "RELEVANT", "IRRELEVANT", or "UNCERTAIN",\n'
+                            '  "reason": "...",\n'
+                            '  "search_intent": "...",\n'
+                            '  "category": <string>,\n'
+                            '  "confidence": <float 0.0-1.0>,\n'
+                            '  "recommended_action": <string>\n'
                             "}}\n"
-                            "For semantic relevance detection, answer: 'Would a knowledgeable employee of this retailer consider this keyword relevant to the retailer's products, services, customer intent, or business domain?'\n"
-                            "Use BOTH Business Facts and Business Knowledge to reason. The website data is supporting evidence, not the only source of truth. Semantically related keywords should be accepted even if missing from the website.\n\n"
-                            "Examples (Retailer: Lenovo):\n"
-                            "Relevant: gaming laptop, usb hub, wireless mouse, developer workstation, business laptop, server rack, thinkpad x1.\n"
-                            "Not Relevant: running shoes, gold ring, diamond necklace, football boots, lipstick, dog food, washing machine.\n"
-                            "For irrelevant keywords, set relevant=false, classification=IRRELEVANT, provide semantic reasoning explaining why it is unrelated to the business domain, and set matched fields to null."
+                            "Use the provided Business Profile for Lenovo US to determine if the keyword is relevant to the retailer's products, services, or domain.\n"
                         ),
                         user_prompt_template="{{business_context}}\n\nClassify these keywords: {{keywords}}",
                     )
@@ -141,15 +134,13 @@ class AIEngine:
             logger.warning("No data found in context. Skipping AI Classification.")
             return
 
-        # 1. Filter keywords to only those that are UNCERTAIN or missing relevance from BusinessContextStage
+        # 1. Filter keywords to only those marked SEND_TO_AI by the Decision Engine
         df = context.data
-        if "business_relevance" in df.columns:
-            # We only send to AI if deterministic filter couldn't resolve it
-            mask = df["business_relevance"].isna() | (
-                df["business_relevance"] == "UNCERTAIN"
-            )
+        if "decision" in df.columns:
+            mask = df["decision"] == "SEND_TO_AI"
             keywords = df.loc[mask, "keyword"].tolist()
         else:
+            # Fallback if no decision engine was run
             keywords = df["keyword"].tolist()
 
         total_kws = len(keywords)
@@ -353,6 +344,11 @@ class AIEngine:
                     merged_count += 1
 
                     # Store in cache
+                    # Add trace metrics to the scored result before caching
+                    scored_result.prompt_version = template.prompt_version
+                    scored_result.model = provider.provider_name
+                    scored_result.latency = batch_duration_ms
+
                     cache_key = self.cache.generate_key(
                         company_name,
                         schema.keyword,
@@ -443,7 +439,8 @@ class AIEngine:
             det_matches = (context.data["business_relevance"] == "RELEVANT").sum()
 
         ai_classified = resolved_count
-        ai_rejected = sum(1 for res in final_results if not res.relevant)
+        ai_classified = resolved_count
+        ai_rejected = sum(1 for res in final_results if res.relevance != "RELEVANT")
 
         total_relevant = det_matches + (ai_classified - ai_rejected)
         total_irrelevant = (
@@ -472,5 +469,5 @@ class AIEngine:
 
         # Log every rejected keyword with reasoning
         for res in final_results:
-            if not res.relevant:
-                logger.info(f"[Rejected] {res.keyword} - Reason: {res.reasoning}")
+            if res.relevance != "RELEVANT":
+                logger.info(f"[Rejected] {res.keyword} - Reason: {res.reason}")

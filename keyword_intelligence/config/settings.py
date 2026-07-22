@@ -8,8 +8,6 @@ Usage:
     from keyword_intelligence.config import get_settings
 
     settings = get_settings()
-    print(settings.app_env)
-    print(settings.log_level)
 """
 
 from __future__ import annotations
