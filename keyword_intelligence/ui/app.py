@@ -314,30 +314,50 @@ def main() -> None:
         st.markdown("#### Keyword Classification Preview")
         st.dataframe(df.head(20), use_container_width=True)
 
+        import io
+
         st.markdown("#### Downloads")
         dl_col1, dl_col2 = st.columns(2)
 
-        csv_all = df.to_csv(index=False).encode("utf-8")
-
         df_relevant = df[df["relevant"] == True] if "relevant" in df.columns else df
-        csv_relevant = df_relevant.to_csv(index=False).encode("utf-8")
+
+        # Create Excel for all data
+        buffer_all = io.BytesIO()
+        # openpyxl is typical engine but xlsxwriter is fine if installed. Fallback to openpyxl
+        try:
+            with pd.ExcelWriter(buffer_all, engine="xlsxwriter") as writer:
+                df.to_excel(writer, index=False, sheet_name="Complete Report")
+        except ImportError:
+            with pd.ExcelWriter(buffer_all, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False, sheet_name="Complete Report")
+        excel_all = buffer_all.getvalue()
+
+        # Create Excel for relevant data
+        buffer_relevant = io.BytesIO()
+        try:
+            with pd.ExcelWriter(buffer_relevant, engine="xlsxwriter") as writer:
+                df_relevant.to_excel(writer, index=False, sheet_name="Relevant Keywords")
+        except ImportError:
+            with pd.ExcelWriter(buffer_relevant, engine="openpyxl") as writer:
+                df_relevant.to_excel(writer, index=False, sheet_name="Relevant Keywords")
+        excel_relevant = buffer_relevant.getvalue()
 
         with dl_col1:
             st.download_button(
-                "⬇️ Download Complete Report (CSV)",
-                data=csv_all,
-                file_name="complete_report.csv",
-                mime="text/csv",
+                "⬇️ Download Complete Report (Excel)",
+                data=excel_all,
+                file_name="complete_report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
                 type="secondary",
             )
 
         with dl_col2:
             st.download_button(
-                "⬇️ Download Relevant Keywords Only (CSV)",
-                data=csv_relevant,
-                file_name="relevant_keywords.csv",
-                mime="text/csv",
+                "⬇️ Download Relevant Keywords Only (Excel)",
+                data=excel_relevant,
+                file_name="relevant_keywords.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
                 type="primary",
             )
