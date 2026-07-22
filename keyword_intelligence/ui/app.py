@@ -313,19 +313,11 @@ def main() -> None:
             )
         st.dataframe(pd.DataFrame(stage_data), use_container_width=True)
 
-        st.markdown("#### Keyword Classification Preview")
-        st.dataframe(df.head(20), use_container_width=True)
-
-        import io
-
-        st.markdown("#### Downloads")
-        dl_col1, dl_col2 = st.columns(2)
-
-        # Clean the dataframe for business output
+        # Clean the dataframe for business output and preview
         df_business = df.rename(
             columns={
                 "classification_stage": "classification",
-                "decision_confidence": "confidence",
+                "relevance_score": "confidence",
                 "company_name": "company",
                 "company_website": "website",
                 "volume": "search_volume",
@@ -373,6 +365,14 @@ def main() -> None:
         ]
         available_cols = [c for c in target_cols if c in df_business.columns]
         df_business = df_business[available_cols]
+
+        st.markdown("#### Keyword Classification Preview")
+        st.dataframe(df_business.head(20), use_container_width=True)
+
+        import io
+
+        st.markdown("#### Downloads")
+        dl_col1, dl_col2 = st.columns(2)
 
         df_relevant = df_business[df_business["relevant"] == "Relevant"] if "relevant" in df_business.columns else df_business
 

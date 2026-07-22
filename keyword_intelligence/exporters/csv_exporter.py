@@ -28,7 +28,7 @@ class CSVExporter(BaseExporter):
             df_business = df.rename(
                 columns={
                     "classification_stage": "classification",
-                    "decision_confidence": "confidence",
+                    "relevance_score": "confidence",
                     "company_name": "company",
                     "company_website": "website",
                 }
