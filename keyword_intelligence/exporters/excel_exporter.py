@@ -6,7 +6,7 @@ import pandas as pd
 from loguru import logger
 
 from keyword_intelligence.exporters.base import BaseExporter
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.pipeline.context import PipelineContext
 
 

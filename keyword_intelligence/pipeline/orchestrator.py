@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from keyword_intelligence.core.exceptions import PipelineError as CorePipelineError
-from keyword_intelligence.models.pipeline import PipelineResult, StageMetrics
+from keyword_intelligence.models import PipelineResult, StageMetrics
 from keyword_intelligence.pipeline.progress import NullProgressReporter
 
 if TYPE_CHECKING:

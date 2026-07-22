@@ -3,7 +3,7 @@
 import pytest
 
 from keyword_intelligence.core.bootstrap import bootstrap
-from keyword_intelligence.models.pipeline import PipelineConfig
+from keyword_intelligence.models import PipelineConfig
 from keyword_intelligence.pipeline.pipeline import Pipeline
 
 

@@ -2,7 +2,7 @@
 
 from keyword_intelligence.core.constants import StageType
 from keyword_intelligence.core.exceptions import SchemaValidationError
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.pipeline.context import PipelineContext
 from keyword_intelligence.pipeline.orchestrator import PipelineOrchestrator
 from keyword_intelligence.pipeline.registry import StageRegistry

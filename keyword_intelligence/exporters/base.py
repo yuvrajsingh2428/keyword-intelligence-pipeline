@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.pipeline.context import PipelineContext
 
 

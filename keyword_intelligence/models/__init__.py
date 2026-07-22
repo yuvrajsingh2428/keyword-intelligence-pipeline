@@ -3,6 +3,7 @@
 from .base import AppBaseModel
 from .pipeline import (
     DatasetMetadata,
+    PipelineConfig,
     PipelineError,
     PipelineMetrics,
     PipelineResult,
@@ -13,6 +14,7 @@ from .pipeline import (
 __all__ = [
     "AppBaseModel",
     "DatasetMetadata",
+    "PipelineConfig",
     "PipelineError",
     "PipelineMetrics",
     "PipelineResult",

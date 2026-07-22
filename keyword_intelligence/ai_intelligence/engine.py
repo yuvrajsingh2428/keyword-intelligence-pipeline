@@ -149,7 +149,7 @@ class AIEngine:
                 "All keywords were deterministically resolved. Skipping AI Classification."
             )
             # We still need to record stage metrics for reporting
-            from keyword_intelligence.models.pipeline import StageMetrics
+            from keyword_intelligence.models import StageMetrics
 
             context.stage_metrics.append(
                 StageMetrics(stage_name="AI_CLASSIFICATION", processing_time_ms=0.0)
@@ -412,7 +412,7 @@ class AIEngine:
         )
 
         # We attach stats to context for the pipeline layer to access
-        from keyword_intelligence.models.pipeline import StageMetrics
+        from keyword_intelligence.models import StageMetrics
 
         context.stage_metrics.append(
             StageMetrics(

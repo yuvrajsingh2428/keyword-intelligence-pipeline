@@ -6,7 +6,7 @@ from keyword_intelligence.exporters.base import BaseExporter
 from keyword_intelligence.exporters.csv_exporter import CSVExporter
 from keyword_intelligence.exporters.excel_exporter import ExcelExporter
 from keyword_intelligence.exporters.json_exporter import JSONExporter
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.pipeline.context import PipelineContext
 
 

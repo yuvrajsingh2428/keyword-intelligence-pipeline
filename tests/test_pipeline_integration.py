@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from keyword_intelligence.models.pipeline import PipelineConfig, PipelineResult
+from keyword_intelligence.models import PipelineConfig, PipelineResult
 from keyword_intelligence.pipeline.pipeline import Pipeline
 
 

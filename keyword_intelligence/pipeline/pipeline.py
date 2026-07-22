@@ -11,7 +11,7 @@ from keyword_intelligence.ai_intelligence.engine import AIEngine
 from keyword_intelligence.config.settings import Settings
 from keyword_intelligence.core.container import container
 from keyword_intelligence.duplicate_detection.engine import DuplicateDetectionEngine
-from keyword_intelligence.models.pipeline import PipelineConfig, PipelineResult
+from keyword_intelligence.models import PipelineConfig, PipelineResult
 from keyword_intelligence.normalization.engine import NormalizationEngine
 from keyword_intelligence.pipeline.context import PipelineContext
 from keyword_intelligence.pipeline.events import PipelineEventListener

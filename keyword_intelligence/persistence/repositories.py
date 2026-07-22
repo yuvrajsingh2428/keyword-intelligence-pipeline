@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.reporting.models import ReportResult
 
 T = TypeVar("T")

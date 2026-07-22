@@ -14,7 +14,7 @@ from keyword_intelligence.core.container import container
 from keyword_intelligence.duplicate_detection.engine import (
     DuplicateDetectionEngine,
 )
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.pipeline.context import PipelineContext
 from keyword_intelligence.pipeline.orchestrator import PipelineOrchestrator
 from keyword_intelligence.pipeline.registry import StageRegistry

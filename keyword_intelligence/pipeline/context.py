@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from keyword_intelligence.models.pipeline import (
+from keyword_intelligence.models import (
     DatasetMetadata,
     PipelineError,
     PipelineMetrics,

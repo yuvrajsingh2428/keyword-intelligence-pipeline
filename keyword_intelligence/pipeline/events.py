@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from keyword_intelligence.core.constants import StageType
-    from keyword_intelligence.models.pipeline import PipelineResult
+    from keyword_intelligence.models import PipelineResult
     from keyword_intelligence.pipeline.context import PipelineContext
 
 

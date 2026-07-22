@@ -8,7 +8,7 @@ from loguru import logger
 
 from keyword_intelligence.config.settings import Settings
 from keyword_intelligence.core.container import container
-from keyword_intelligence.models.pipeline import PipelineResult
+from keyword_intelligence.models import PipelineResult
 from keyword_intelligence.pipeline.context import PipelineContext
 from keyword_intelligence.pipeline.pipeline import Pipeline
 from keyword_intelligence.reporting.engine import ReportEngine

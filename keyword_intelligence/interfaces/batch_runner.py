@@ -8,7 +8,7 @@ from typing import Any
 
 from loguru import logger
 
-from keyword_intelligence.models.pipeline import PipelineConfig
+from keyword_intelligence.models import PipelineConfig
 from keyword_intelligence.pipeline.pipeline import Pipeline
 
 
