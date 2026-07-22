@@ -176,7 +176,9 @@ def main() -> None:
 
             def st_sink(msg: Any) -> None:
                 record_msg = msg.record["message"]
-                if (
+                if "Token has expired or quota exhausted" in record_msg:
+                    status_container.error("**Status**: Token has expired now.")
+                elif (
                     "Using Gemini" in record_msg
                     or "Switching to" in record_msg
                     or "exhausted" in record_msg

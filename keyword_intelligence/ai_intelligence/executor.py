@@ -80,6 +80,13 @@ class SequentialAIBatchExecutor(AIBatchExecutor):
                     break
                 except Exception as e:
                     last_err = e
+                    err_str = str(e).lower()
+                    
+                    # Stop looping if tokens/keys are completely exhausted or expired
+                    if any(k in err_str for k in ["exhausted", "expired", "401", "402", "403", "quota"]):
+                        logger.error(f"Token has expired or quota exhausted: {e}")
+                        break
+
                     if attempt <= self.max_retries:
                         logger.warning(
                             f"AI Batch {i} failed (Attempt {attempt}): {e}. Retrying in {self.retry_delay}s..."
