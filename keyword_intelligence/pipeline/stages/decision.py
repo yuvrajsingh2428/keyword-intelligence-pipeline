@@ -26,7 +26,7 @@ class DecisionEngineStage(BaseStage):
 
     def execute(self, context: PipelineContext) -> PipelineContext:
         """Execute decision engine logic on context."""
-        logger.info(f"Executing stage {self.stage_type.value}")
+        # Logging removed
 
         if not context.has_data:
             return context
@@ -47,16 +47,30 @@ class DecisionEngineStage(BaseStage):
                 res_reason = "Duplicate keyword"
                 res_confidence = 1.0
             else:
+                import pandas as pd
                 retail_relevance = row.get("business_relevance")
                 business_confidence = float(row.get("business_confidence", 0.0))
                 requires_ai = bool(row.get("requires_ai", True))
                 deterministic_reason = row.get("business_reason")
+                
+                brand_ev = row.get("business_brand") if not pd.isna(row.get("business_brand")) else None
+                cat_ev = row.get("business_category") if not pd.isna(row.get("business_category")) else None
+                fam_ev = row.get("business_product_family") if not pd.isna(row.get("business_product_family")) else None
+                prod_ev = row.get("business_product") if not pd.isna(row.get("business_product")) else None
+                tech_ev = row.get("business_technology") if not pd.isna(row.get("business_technology")) else None
+                syn_ev = row.get("business_synonym") if not pd.isna(row.get("business_synonym")) else None
 
                 res = self.engine.decide(
                     retail_relevance,
                     business_confidence,
                     requires_ai,
                     deterministic_reason,
+                    brand_ev,
+                    cat_ev,
+                    fam_ev,
+                    prod_ev,
+                    tech_ev,
+                    syn_ev,
                 )
 
                 decision_val = (
@@ -84,10 +98,26 @@ class DecisionEngineStage(BaseStage):
         context.data["decision_reason"] = reasons
         context.data["decision_confidence"] = confidences
 
-        logger.info("\nDecision Engine")
-        logger.info(f"KEEP: {keep}")
-        logger.info(f"DROP: {drop}")
-        logger.info(f"SEND_TO_AI: {send}")
-        logger.info(f"REVIEW: {review}")
+        brand_ev = df["business_brand"].notna().sum() if "business_brand" in df.columns else 0
+        cat_ev = df["business_category"].notna().sum() if "business_category" in df.columns else 0
+        prod_ev = df["business_product"].notna().sum() if "business_product" in df.columns else 0
+        fam_ev = df["business_product_family"].notna().sum() if "business_product_family" in df.columns else 0
+        tech_ev = df["business_technology"].notna().sum() if "business_technology" in df.columns else 0
+        unknown = df["requires_ai"].sum() if "requires_ai" in df.columns else 0
+
+        trace = (
+            f"KEEP: {keep}\n"
+            f"DROP: {drop}\n"
+            f"SEND_TO_AI: {send}\n"
+            f"REVIEW: {review}\n\n"
+            f"WHY\n"
+            f"Brand Evidence: {brand_ev}\n"
+            f"Category Evidence: {cat_ev}\n"
+            f"Product Evidence: {prod_ev}\n"
+            f"Family Evidence: {fam_ev}\n"
+            f"Technology Evidence: {tech_ev}\n"
+            f"Unknown: {unknown}"
+        )
+        context.stage_diagnostics[self.stage_type.value] = trace
 
         return context

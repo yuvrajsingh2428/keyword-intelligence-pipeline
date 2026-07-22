@@ -75,7 +75,6 @@ class GeminiProvider(AIProvider):
             self.current_key_idx = attempt_idx
 
             client = genai.Client(api_key=api_key)
-            logger.info(f"Using Gemini API Key #{attempt_idx + 1}")
 
             try:
                 response = client.models.generate_content(
@@ -89,10 +88,6 @@ class GeminiProvider(AIProvider):
                 )
 
                 raw_text = response.text or ""
-                logger.debug(f"Gemini raw response snippet:\n{raw_text[:300]}...")
-
-                if attempt_idx > 0:
-                    logger.info(f"Gemini API Key #{attempt_idx + 1} succeeded")
 
                 return raw_text
 
@@ -111,11 +106,7 @@ class GeminiProvider(AIProvider):
                 ]
 
                 if any(k in err_str for k in retry_keywords):
-                    logger.warning(
-                        f"Gemini API Key #{attempt_idx + 1} quota exceeded or unavailable"
-                    )
                     if attempt_idx + 1 < len(self.api_keys):
-                        logger.info(f"Switching to Gemini API Key #{attempt_idx + 2}")
                         continue
                     else:
                         logger.warning("All Gemini API keys exhausted")
@@ -141,9 +132,7 @@ class GeminiProvider(AIProvider):
                 ]
 
                 if any(k in err_str for k in retry_keywords):
-                    logger.warning(f"Gemini API Key #{attempt_idx + 1} unavailable")
                     if attempt_idx + 1 < len(self.api_keys):
-                        logger.info(f"Switching to Gemini API Key #{attempt_idx + 2}")
                         continue
                     else:
                         logger.warning("All Gemini API keys exhausted")

@@ -63,7 +63,7 @@ class DuplicateDetectionEngine:
         Returns:
             DuplicateDetectionResult containing groups, statistics, and metrics.
         """
-        logger.info("Starting Duplicate Detection Engine.")
+        # Logging removed
         start_time = time.perf_counter()
 
         initial_rows = len(context.data) if context.has_data else 0
@@ -112,7 +112,7 @@ class DuplicateDetectionEngine:
             context.data.loc[mask, "status"] = "DUPLICATE"
 
             duplicates_removed = exact_removed + len(to_remove)
-            logger.info(f"Marked {duplicates_removed} duplicates in context.")
+            # Logging removed
 
         total_time_ms = (time.perf_counter() - start_time) * 1000
 
@@ -134,10 +134,7 @@ class DuplicateDetectionEngine:
             execution_time_ms=total_time_ms,
         )
 
-        logger.info(
-            f"Duplicate Detection Engine finished in {total_time_ms:.2f}ms. "
-            f"Found {len(duplicate_groups)} groups. Removed {duplicates_removed} keywords."
-        )
+        # Logging removed
 
         return DuplicateDetectionResult(
             duplicate_groups=duplicate_groups,

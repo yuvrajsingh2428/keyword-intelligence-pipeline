@@ -81,6 +81,9 @@ class KeywordBusinessContext(AppBaseModel):
     brand: str | None = None
     category: str | None = None
     product_family: str | None = None
+    product: str | None = None
+    technology: str | None = None
+    synonym_matched: str | None = None
     domain: str | None = None
     retail_relevance: bool | None = None
     search_intent: str | None = None

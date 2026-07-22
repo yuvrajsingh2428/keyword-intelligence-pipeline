@@ -125,14 +125,12 @@ class AIEngine:
         ]
         return any(k in err_str for k in retry_keywords)
 
-    def process(self, context: PipelineContext) -> None:
+    def process(self, context: PipelineContext) -> AIEngineStatistics | None:
         """Process the context DataFrame through the AI engine."""
-        logger.info("Starting AI Keyword Intelligence Engine.")
         start_time = time.perf_counter()
 
         if not context.has_data:
-            logger.warning("No data found in context. Skipping AI Classification.")
-            return
+            return None
 
         # 1. Filter keywords to only those marked SEND_TO_AI by the Decision Engine
         df = context.data
@@ -145,19 +143,13 @@ class AIEngine:
 
         total_kws = len(keywords)
         if total_kws == 0:
-            logger.info(
-                "All keywords were deterministically resolved. Skipping AI Classification."
-            )
             # We still need to record stage metrics for reporting
             from keyword_intelligence.models import StageMetrics
 
             context.stage_metrics.append(
                 StageMetrics(stage_name="AI_CLASSIFICATION", processing_time_ms=0.0)
             )
-            return
-
-        logger.info("AI Classification")
-        logger.info(f"Received: {total_kws} keywords")
+            return None
 
         # 2. Resolve Provider and Prompt
         provider = self.resolver.resolve(self.config.provider)
@@ -165,15 +157,9 @@ class AIEngine:
             provider.provider_name, "default_classifier", "1.0.0"
         )
 
-        # 2. Enforce Capabilities (Max Batch Size)
         actual_batch_size = min(
             self.config.batch_size, provider.capabilities.max_batch_size
         )
-        if actual_batch_size < self.config.batch_size:
-            logger.warning(
-                f"Configured AI batch size ({self.config.batch_size}) exceeds provider "
-                f"limit ({provider.capabilities.max_batch_size}). Enforcing provider limit."
-            )
 
         # 3. Cache Check
         keywords_to_fetch: list[str] = []
@@ -226,9 +212,7 @@ class AIEngine:
                 f"Description: {bp.business_description[:500]}\n"
             )
 
-            logger.debug(
-                f"Injecting Business Profile into Prompt:\n{business_context_str}"
-            )
+            # Debug log removed
 
         # 6. Execute Batches
         batch_start = time.perf_counter()
@@ -299,15 +283,10 @@ class AIEngine:
                         raw_responses.extend(fb_responses)
                         exec_exceptions.extend(fb_exceptions)
 
-                        if fb_exceptions:
-                            logger.error("All AI providers failed")
-                        else:
-                            logger.info("OpenRouter succeeded")
                     except ValueError:
-                        # OpenRouter not registered / unavailable
-                        logger.warning("OpenRouter fallback not available.")
+                        pass
                     except Exception as fallback_err:
-                        logger.error(f"Fallback execution failed: {fallback_err}")
+                        pass
 
         template.user_prompt_template = original_template
 
@@ -317,20 +296,14 @@ class AIEngine:
         # Build O(1) lookup to prevent O(N^2) slowdown during scoring
         lookup: dict[str, dict[str, Any]] = {}
         if not context.data.empty and "keyword" in context.data.columns:
-            raw_lookup = context.data.set_index("keyword").to_dict(orient="index")
+            raw_lookup = context.data.drop_duplicates(subset=["keyword"]).set_index("keyword").to_dict(orient="index")
             lookup = {str(k): cast(dict[str, Any], v) for k, v in raw_lookup.items()}
 
         for i, raw_resp in enumerate(raw_responses, 1):
             try:
                 parsed_data = self.parser.parse(raw_resp)
 
-                logger.info(
-                    f"--- AI BATCH {i} DEBUG ---\n"
-                    f"1. Raw response length: {len(raw_resp)}\n"
-                    f"2. Raw response: {raw_resp[:300]}...\n"
-                    f"3. Parsed JSON type: {type(parsed_data).__name__}\n"
-                    f"4. Number of parsed objects: {len(parsed_data)}"
-                )
+                # Logging removed
 
                 valid_schemas, val_errors = self.validator.validate(parsed_data)
                 validation_failures += len(val_errors)
@@ -357,11 +330,10 @@ class AIEngine:
                     )
                     self.cache.put(cache_key, scored_result)
 
-                logger.info(f"5. Number of merged objects: {merged_count}")
+                # Logging removed
 
             except ValueError as e:
                 parse_failures += 1
-                logger.error(f"Failed to parse AI response: {e}")
 
         # 7. Aggregate Results into Context
         self.aggregator.aggregate(context, final_results)
@@ -421,53 +393,4 @@ class AIEngine:
             )
         )
 
-        logger.info(
-            f"AI Engine finished in {total_time_ms:.2f}ms. "
-            f"Resolved {resolved_count}/{total_kws} keywords."
-        )
-        if unresolved_count > 0:
-            context.add_warning(
-                "AI_CLASSIFICATION",
-                "UNRESOLVED_KEYWORDS",
-                f"Failed to classify {unresolved_count} keywords.",
-            )
-
-        # Print Requested Summary
-        logger.info("\n--- Classification Summary ---")
-        det_matches = 0
-        if "business_relevance" in context.data.columns:
-            det_matches = (context.data["business_relevance"] == "RELEVANT").sum()
-
-        ai_classified = resolved_count
-        ai_classified = resolved_count
-        ai_rejected = sum(1 for res in final_results if res.relevance != "RELEVANT")
-
-        total_relevant = det_matches + (ai_classified - ai_rejected)
-        total_irrelevant = (
-            (context.data["business_relevance"] == "IRRELEVANT").sum() + ai_rejected
-            if "business_relevance" in context.data.columns
-            else ai_rejected
-        )
-
-        reduction = (
-            (det_matches / len(context.data) * 100) if len(context.data) > 0 else 0
-        )
-
-        logger.info(f"Deterministic Matches: {det_matches}")
-        logger.info(f"AI Classified: {ai_classified}")
-        logger.info(f"AI Rejected: {ai_rejected}")
-        logger.info(f"Total Relevant: {total_relevant}")
-        logger.info(f"Total Irrelevant: {total_irrelevant}")
-        logger.info(f"Reduction in AI workload: {reduction:.1f}%")
-
-        if self.settings.debug:
-            logger.debug(f"[DEBUG] Number of AI Calls: {batches_processed}")
-            logger.debug(f"[DEBUG] Processing Time: {total_time_ms:.0f}ms")
-            logger.debug(
-                f"[DEBUG] Prompt Length: {len(business_context_str)} characters"
-            )
-
-        # Log every rejected keyword with reasoning
-        for res in final_results:
-            if res.relevance != "RELEVANT":
-                logger.info(f"[Rejected] {res.keyword} - Reason: {res.reason}")
+        return stats

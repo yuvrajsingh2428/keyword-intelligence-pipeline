@@ -41,7 +41,7 @@ class BusinessContextEngine:
         force_refresh: bool = False,
     ) -> BusinessProfile:
         """Build or retrieve a BusinessProfile for the given company."""
-        logger.info(f"BusinessContextEngine starting for {company_name} ({website})")
+        # Logging removed
         start = time.perf_counter()
 
         if force_refresh:
@@ -49,14 +49,14 @@ class BusinessContextEngine:
 
         profile = self.cache.get(company_name, website)
         if profile:
-            logger.info("Found valid BusinessProfile in cache.")
+            # Logging removed
             return profile
 
         # 1. Collect
         try:
             contents = self.collector.collect(company_name, website)
         except Exception as e:
-            logger.error(f"Collector failed completely: {e}")
+            # Logging removed
             contents = []
 
         # 2. Extract Draft
@@ -69,32 +69,16 @@ class BusinessContextEngine:
             self.validator.validate(draft)
 
         # Log draft stats
-        logger.info(
-            f"BusinessProfile Draft: Products Found: {len(draft.business_facts.products)}, Brands Found: {len(draft.business_facts.brands)}, Categories Found: {len(draft.business_facts.categories)}, Source URLs: {len(draft.metadata.source_pages)}"
-        )
+        # Logging removed
 
         if not contents:
-            logger.warning(
-                "No website content collected. Returning minimal fallback profile without LLM enrichment."
-            )
             draft.metadata.quality_score = 0.0
-            return draft
-
-        if self.settings.debug:
-            logger.debug(
-                f"[DEBUG] Business Facts Extracted - "
-                f"Number of Brands: {len(draft.business_facts.brands)}, "
-                f"Number of Products: {len(draft.business_facts.products)}, "
-                f"Number of Categories: {len(draft.business_facts.categories)}, "
-                f"Number of Services: {len(draft.business_facts.services)}"
-            )
+            # Continue to LLM enricher for parametric fallback
 
         # 3. Enrich profile with missing metadata via LLM
         profile = self.llm_enricher.generate(draft, contents)
 
-        logger.info(
-            f"BusinessProfile Enriched: Industry: {profile.industry}, Product Families: {len(profile.business_facts.product_families)}, Technologies: {len(profile.technologies)}, Customer Segments: {len(profile.customer_segments)}"
-        )
+        # Logging removed
 
         # 4. Calculate Quality Score
         score = 0.0
@@ -118,11 +102,9 @@ class BusinessContextEngine:
 
         # 5. Cache
         self.cache.put(profile)
-        logger.info(
-            f"BusinessProfile Cached: Cache Key: {profile.company_name}:{profile.website}"
-        )
+        # Logging removed
 
         duration_ms = (time.perf_counter() - start) * 1000
-        logger.info(f"BusinessContextEngine completed in {duration_ms:.0f}ms.")
+        # Logging removed
 
         return profile

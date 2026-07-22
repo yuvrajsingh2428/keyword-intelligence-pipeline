@@ -22,10 +22,7 @@ class CSVExporter(BaseExporter):
         exported_files = []
 
         try:
-            # 1. Debug Output (Full DataFrame)
-            debug_path = output_dir / "filtered_keywords_debug.csv"
-            df.to_csv(debug_path, index=False)
-            exported_files.append(str(debug_path.absolute()))
+
 
             # 2. Business Output (Clean Columns)
             df_business = df.rename(

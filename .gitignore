@@ -69,7 +69,10 @@ logs/*
 
 #result
 output/
- 
+
 # === Application ===
 cache/
 generated_reports/
+
+
+sample_test_file.xlsx/

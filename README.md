@@ -136,14 +136,12 @@ The pipeline determines that "ThinkPad X1 Carbon" matches Lenovo's deterministic
 
 All outputs are saved to a timestamped folder inside the `output/` directory (e.g., `output/2026-07-22_14-30-00/`).
 
-- **`filtered_keywords.xlsx`**: A business-ready Excel workbook containing final results, visual pipeline summaries, AI decision logs, and full debug data.
+- **`filtered_keywords.xlsx`**: A business-ready Excel workbook containing final results, visual pipeline summaries, AI decision logs.
 - **`filtered_keywords.csv`**: A clean CSV of the final dataset, suitable for BI tool ingestion.
-- **`filtered_keywords_debug.csv`**: The raw dataset containing all internal telemetry, confidence scores, and normalization traces.
 - **`duplicate_keywords.csv`**: (Generated if duplicates found) A list of keywords removed during the deduplication phase.
 - **`execution_summary.json`**: High-level execution metrics (Rows Read, AI Reduction %, Final Runtime).
 - **`pipeline_metrics.json`**: Detailed telemetry on AI token usage, fallback activations, and match counts.
 - **`stage_metrics.json`**: Execution durations for every stage in the pipeline (Loader, Validator, Preprocessor, etc.).
-- **`pipeline_health.json`**: Overall system health, capturing any internal anomalies or warnings.
 
 ## Cache
 

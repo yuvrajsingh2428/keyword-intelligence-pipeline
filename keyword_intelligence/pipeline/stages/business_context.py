@@ -35,24 +35,18 @@ class BusinessContextStage(BaseStage):
         return "3.0.0"
 
     def execute(self, context: PipelineContext) -> PipelineContext:
-        logger.info(f"Executing stage {self.stage_type.value}")
-
         if not context.has_data or "keyword" not in context.data.columns:
-            logger.warning(
-                "No data or 'keyword' column missing in BusinessContextStage."
-            )
             return context
 
-        logger.info(
-            f"Building dynamic company profile for {self.company_name} ({self.website})"
-        )
         profile = self.engine.process(
             company_name=self.company_name, website=self.website, industry=self.industry
         )
 
-        logger.info("Running deterministic business context enrichment...")
         rule_engine = BusinessRuleEngine(profile)
 
+        products = []
+        technologies = []
+        synonyms = []
         brands = []
         categories = []
         families = []
@@ -64,13 +58,19 @@ class BusinessContextStage(BaseStage):
 
         matched_brand = 0
         matched_product = 0
+        matched_family = 0
         matched_category = 0
+        matched_technology = 0
+        matched_synonym = 0
         sent_to_ai = 0
         retail_filtered = 0
 
         for kw in context.data["keyword"]:
             res = rule_engine.process(str(kw))
 
+            products.append(res.product)
+            technologies.append(res.technology)
+            synonyms.append(res.synonym_matched)
             brands.append(res.brand)
             categories.append(res.category)
             families.append(res.product_family)
@@ -86,13 +86,22 @@ class BusinessContextStage(BaseStage):
                 if res.retail_relevance is False:
                     retail_filtered += 1
 
-            if res.product_family:
+            if res.product:
                 matched_product += 1
+            if res.product_family:
+                matched_family += 1
             if res.brand:
                 matched_brand += 1
             if res.category:
                 matched_category += 1
+            if res.technology:
+                matched_technology += 1
+            if res.synonym_matched:
+                matched_synonym += 1
 
+        context.data["business_product"] = products
+        context.data["business_technology"] = technologies
+        context.data["business_synonym"] = synonyms
         context.data["business_brand"] = brands
         context.data["business_category"] = categories
         context.data["business_product_family"] = families
@@ -102,11 +111,48 @@ class BusinessContextStage(BaseStage):
         context.data["business_confidence"] = confidences
         context.data["requires_ai"] = requires_ais
 
-        logger.info("\nBusiness Context")
-        logger.info(f"Rows: {len(context.data)}")
-        logger.info(f"Matched Brand: {matched_brand}")
-        logger.info(f"Matched Category: {matched_category}")
-        logger.info(f"Requires AI: {sent_to_ai}")
-        logger.info(f"Retail Filtered: {retail_filtered}")
+        # Format Trace Blocks
+        facts = profile.business_facts
+        total_kws = len(context.data)
+        
+        business_profile_trace = (
+            f"Business Profile\n"
+            f"Brands: {len(facts.brands)}\n"
+            f"Categories: {len(facts.categories)}\n"
+            f"Products: {len(facts.products)}\n"
+            f"Product Families: {len(facts.product_families)}\n"
+            f"Technologies: {len(profile.technologies)}\n"
+            f"Customer Segments: {len(profile.customer_segments)}\n"
+            f"Synonyms: {len(facts.synonyms)}\n"
+        )
+        
+        rule_engine_trace = (
+            f"Brand Resolver\n"
+            f"Input Entities: {total_kws}\n"
+            f"Matches: {matched_brand}\n"
+            f"Misses: {total_kws - matched_brand}\n\n"
+            
+            f"Category Resolver\n"
+            f"Input Entities: {total_kws}\n"
+            f"Matches: {matched_category}\n"
+            f"Misses: {total_kws - matched_category}\n\n"
+            
+            f"Product Resolver\n"
+            f"Input Entities: {total_kws}\n"
+            f"Matches: {matched_product}\n"
+            f"Misses: {total_kws - matched_product}\n\n"
+            
+            f"Product Family Resolver\n"
+            f"Input Entities: {total_kws}\n"
+            f"Matches: {matched_family}\n"
+            f"Misses: {total_kws - matched_family}\n\n"
+            
+            f"Technology Resolver\n"
+            f"Input Entities: {total_kws}\n"
+            f"Matches: {matched_technology}\n"
+            f"Misses: {total_kws - matched_technology}"
+        )
+        
+        context.stage_diagnostics[self.stage_type.value] = f"{business_profile_trace}\n{rule_engine_trace}"
 
         return context

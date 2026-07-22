@@ -39,6 +39,7 @@ class PipelineContext:
 
         self.warnings: list[PipelineWarning] = []
         self.errors: list[PipelineError] = []
+        self.stage_diagnostics: dict[str, str] = {}
 
     @property
     def data(self) -> pd.DataFrame:

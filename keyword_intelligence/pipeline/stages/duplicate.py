@@ -29,7 +29,7 @@ class DuplicateDetectionStage(BaseStage):
 
     def execute(self, context: PipelineContext) -> PipelineContext:
         """Execute the duplicate detection engine."""
-        logger.info(f"Executing stage {self.stage_type.value}")
+        # Logging removed
 
         result = self.engine.process(context)
 

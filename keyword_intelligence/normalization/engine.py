@@ -69,7 +69,7 @@ class NormalizationEngine:
         Returns:
             A NormalizationResult containing normalized keywords, traces, and metrics.
         """
-        logger.debug(f"Applying {len(self.strategies)} normalization strategies.")
+        # Removing debug log
         original_series = series.copy().fillna("")
         current_series = original_series.copy()
 
@@ -79,7 +79,7 @@ class NormalizationEngine:
 
         for strategy in self.strategies:
             strategy_name = strategy.__class__.__name__
-            logger.debug(f"Executing {strategy_name}...")
+            # Removing debug log
 
             new_series = strategy.apply(current_series)
 

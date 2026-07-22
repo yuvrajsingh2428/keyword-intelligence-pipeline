@@ -104,45 +104,33 @@ class CliRunner:
             )
 
             summary = result.execution_summary or {}
-            print("\n====================================")
-            print("Keyword Intelligence Pipeline")
-            print("====================================")
+            print("\nPipeline Completed Successfully\n")
             print(f"Rows Read: {summary.get('Rows Read', 0)}")
             print(f"Unique Keywords: {summary.get('Unique Keywords', 0)}")
-            print(f"Duplicate Keywords: {summary.get('Duplicate Keywords', 0)}")
+            print(f"Duplicates: {summary.get('Duplicate Keywords', 0)}")
             print(f"Relevant: {summary.get('Relevant', 0)}")
             print(f"Irrelevant: {summary.get('Irrelevant', 0)}")
-            print(f"Deterministic: {summary.get('Deterministic', 0)}")
-            print(f"AI: {summary.get('AI', 0)}")
-            print(f"AI Reduction %: {summary.get('AI Reduction %', '0.0%')}")
-            print(f"Runtime: {summary.get('Runtime', '0 sec')}")
+            print(f"Runtime: {summary.get('Runtime', '0 sec')}\n")
 
-            output_dir_name = "output"
-            if result.output_file_locations:
-                first_file = Path(result.output_file_locations[0])
-                output_dir_name = f"output/{first_file.parent.name}/"
-
-            print(f"\nOutput Directory:\n{output_dir_name}\n")
-            print("Generated Files")
-
+            print("Generated Files:\n")
+            
             generated_names = [Path(f).name for f in result.output_file_locations]
-            expected = [
+            expected_to_keep = {
                 "filtered_keywords.csv",
-                "filtered_keywords_debug.csv",
                 "filtered_keywords.xlsx",
-                "execution_summary.json",
                 "pipeline_metrics.json",
                 "stage_metrics.json",
-            ]
-
-            for f in expected:
+                "execution_summary.json"
+            }
+            
+            for f in expected_to_keep:
                 if f in generated_names:
-                    print(f"✓ {f}")
-
+                    print(f.strip())
+            
             for f in generated_names:
-                if f not in expected:
-                    print(f"✓ {f}")
-            print("====================================\n")
+                if f not in expected_to_keep and "debug" not in f and "health" not in f and "duplicate" not in f:
+                    print(f.strip())
+            print()
 
         except Exception as e:
             print(f"Pipeline execution failed critically: {e}")

@@ -69,9 +69,7 @@ class PipelineOrchestrator:
                 with logger.contextualize(
                     execution_id=context.execution_id, stage=stage.stage_type.value
                 ):
-                    logger.info(
-                        f"Stage '{stage.stage_type.value}' (v{stage.stage_version}) started (Attempt {attempt})."
-                    )
+                    # Remove debug start log
 
                     self._trigger_event("before_stage", stage.stage_type, context)
 
@@ -114,13 +112,45 @@ class PipelineOrchestrator:
                         exceptions=[e.message for e in context.errors[initial_errors:]],
                     )
 
-                    logger.info(
-                        f"Running {stage.stage_type.value}...\n"
-                        f"✓ Completed\n"
-                        f"Input Rows: {initial_rows}\n"
-                        f"Output Rows: {final_rows}\n"
-                        f"Duration: {duration_ms / 1000.0:.2f} sec"
-                    )
+                    stage_name = stage.stage_type.value
+                    
+                    rows_added = final_rows - initial_rows if final_rows > initial_rows else 0
+                    rows_removed = initial_rows - final_rows if initial_rows > final_rows else 0
+                    
+                    # Compute rows modified via is_normalized if available, or 0 if not tracked.
+                    rows_modified = 0
+                    if context.has_data and "is_normalized" in context.data.columns:
+                        rows_modified = int(context.data["is_normalized"].sum())
+                    
+                    stage_specific = context.stage_diagnostics.get(stage_name, "")
+                    if stage_specific:
+                        stage_specific = f"\n{stage_specific}"
+                    
+                    warnings_count = len(context.warnings) - initial_warnings
+                    errors_count = len(context.errors) - initial_errors
+                    
+                    if self.settings.debug:
+                        trace_block = (
+                            f"--------------------------------------------------\n"
+                            f"Stage: {stage_name}\n"
+                            f"--------------------------------------------------\n"
+                            f"Rows In: {initial_rows}\n"
+                            f"Rows Out: {final_rows}\n"
+                            f"Rows Modified: {rows_modified}\n"
+                            f"Rows Removed: {rows_removed}\n"
+                            f"Rows Added: {rows_added}\n"
+                            f"Execution Time: {duration_ms / 1000.0:.2f} sec\n"
+                            f"Warnings: {warnings_count}\n"
+                            f"Errors: {errors_count}\n"
+                            f"{stage_specific}\n"
+                            f"--------------------------------------------------"
+                        )
+                        print(trace_block)
+                    else:
+                        if errors_count > 0:
+                            print(f"{stage_name} ERROR")
+                        else:
+                            print(f"{stage_name} ✓")
 
                     self._trigger_event("after_stage", stage.stage_type, context)
                     return metrics

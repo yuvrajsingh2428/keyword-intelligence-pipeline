@@ -41,6 +41,8 @@ class WebsiteCollector(BaseCollector):
         self.ignore_re = re.compile("|".join(self.ignore_patterns), re.IGNORECASE)
 
     def collect(self, company_name: str, website_url: str) -> list[CollectedContent]:
+        if not website_url.startswith("http"):
+            website_url = f"https://{website_url}"
         logger.info(f"WebsiteCollector starting for {website_url}")
 
         visited: set[str] = set()

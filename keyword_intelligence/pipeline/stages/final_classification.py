@@ -57,7 +57,7 @@ class FinalClassificationStage(BaseStage):
         # Get company context from dynamic profile (will hit cache)
         company_ctx = self.engine.process(self.company_name, self.website)
 
-        logger.info("Applying final classification rules...")
+        # Logging removed
 
         def _compute_final_classification(row: pd.Series) -> pd.Series:
             decision = row.get("decision", "REVIEW")
@@ -147,11 +147,26 @@ class FinalClassificationStage(BaseStage):
 
         context.data = df
 
-        # Calculate final stats
-        total_relevant = df["relevant"].sum()
-        logger.info(
-            f"Final Classification Complete: {total_relevant}/{len(df)} Relevant Keywords"
+        # Reconcile counts
+        det_rel = ((df["processing_method"] == "Deterministic") & (df["relevant"] == True)).sum()
+        ai_rel = ((df["processing_method"] == "AI") & (df["relevant"] == True)).sum()
+        det_irrel = ((df["processing_method"] == "Deterministic") & (df["relevant"] == False) & (df.get("status", "") != "DUPLICATE")).sum()
+        ai_irrel = ((df["processing_method"] == "AI") & (df["relevant"] == False) & (df.get("status", "") != "DUPLICATE")).sum()
+        duplicates = (df.get("status", "") == "DUPLICATE").sum()
+        
+        final_rel = df["relevant"].sum()
+        final_irrel = (~df["relevant"]).sum()
+        
+        trace = (
+            f"Deterministic Relevant: {det_rel}\n"
+            f"AI Relevant: {ai_rel}\n"
+            f"Deterministic Irrelevant: {det_irrel}\n"
+            f"AI Irrelevant: {ai_irrel}\n"
+            f"Duplicates: {duplicates}\n"
+            f"Final Relevant: {final_rel}\n"
+            f"Final Irrelevant: {final_irrel}"
         )
+        context.stage_diagnostics[self.stage_type.value] = trace
 
         if (
             (df["relevant"] == False).all()

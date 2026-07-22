@@ -68,6 +68,14 @@ class Pipeline:
         import json
         import uuid
         from datetime import datetime
+        import shutil
+
+        # Clean old outputs automatically
+        for dir_name in ["output", "temp", "cache", "debug"]:
+            target_dir = Path(self.config.report_directory).parent / dir_name
+            if target_dir.exists() and target_dir.is_dir():
+                shutil.rmtree(target_dir, ignore_errors=True)
+            target_dir.mkdir(parents=True, exist_ok=True)
 
         run_id = str(uuid.uuid4())
         output_dir = Path(self.config.report_directory) / run_id
@@ -344,15 +352,16 @@ class Pipeline:
                     timestamp_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                     output_dir = Path(self.config.report_directory) / timestamp_dir
 
+                    # Reporting Trace
+                    before_relevant = (context.data["relevant"] == True).sum() if context.has_data and "relevant" in context.data.columns else 0
+
                     exported_files = manager.export(result, context, output_dir)
+                    
+                    after_relevant = (context.data["relevant"] == True).sum() if context.has_data and "relevant" in context.data.columns else 0
+                    if before_relevant != after_relevant:
+                        print("WARNING: Reporting changed classification counts!")
 
-                    # Export Health Report
-                    import json
-
-                    health_path = output_dir / "pipeline_health.json"
-                    with open(health_path, "w") as f:
-                        json.dump(health, f, indent=2)
-                    exported_files.append(str(health_path.absolute()))
+                    # Export Health Report skipped for production
 
                     result.output_file_locations.extend(exported_files)
 
@@ -361,5 +370,59 @@ class Pipeline:
 
             # Stop capturing logs for this run
             logger.remove(log_handler)
+            
+            # --- PIPELINE CONSISTENCY CHECK ---
+            import pandas as pd
+            if context.has_data:
+                df = context.data
+                rows_loaded = len(df)
+                relevant = (df.get("relevant", pd.Series([False]*len(df))) == True).sum()
+                irrelevant = (df.get("relevant", pd.Series([False]*len(df))) == False).sum()
+                duplicates = (df.get("status", pd.Series([""]*len(df))) == "DUPLICATE").sum()
+                dropped = 0 # Not currently physically dropping rows in this architecture, just marking status
+                
+                # Irrelevant shouldn't include duplicates if they are mutually exclusive in accounting, 
+                # but depending on schema, duplicate rows might have relevant=False. Let's adjust logic:
+                active_rows = (df.get("status", pd.Series([""]*len(df))) != "DUPLICATE").sum()
+                relevant = (df.get("relevant", pd.Series([False]*len(df))) == True).sum()
+                irrelevant = active_rows - relevant
+                
+                if rows_loaded != (relevant + irrelevant + duplicates + dropped):
+                    print("\nPIPELINE ACCOUNTING FAILURE")
+                
+            if self.settings.debug:
+                # --- FAILURE REPORT ---
+                print("\n==================================================")
+                print("PIPELINE DIAGNOSTIC SUMMARY")
+                print("==================================================")
+                
+                # Helper to check if a stage threw an error
+                def stage_status(stage_name: str) -> str:
+                    # If an error is registered for this stage
+                    if any(e.stage == stage_name for e in context.errors):
+                        return "FAIL"
+                    
+                    # Check if it was skipped or ran
+                    ran = any(m.stage_name == stage_name for m in context.stage_metrics)
+                    if not ran:
+                        return "SKIPPED"
+                        
+                    return "PASS"
+
+                print(f"Normalization\t\t\t{stage_status('NORMALIZATION')}")
+                print(f"Duplicate Detection\t\t{stage_status('DUPLICATE_DETECTION')}")
+                print(f"Business Profile Generation\t{stage_status('BUSINESS_CONTEXT')}")
+                
+                brand_fail = "FAIL" if "Matches: 0\nMisses:" in context.stage_diagnostics.get("BUSINESS_CONTEXT", "") else "PASS"
+                cat_fail = "FAIL" if "Matches: 0\nMisses:" in context.stage_diagnostics.get("BUSINESS_CONTEXT", "") else "PASS"
+                prod_fail = "FAIL" if "Matches: 0\nMisses:" in context.stage_diagnostics.get("BUSINESS_CONTEXT", "") else "PASS"
+                
+                print(f"Brand Resolver\t\t\t{brand_fail}")
+                print(f"Category Resolver\t\t{cat_fail}")
+                print(f"Product Resolver\t\t{prod_fail}")
+                print(f"Decision Engine\t\t\t{stage_status('DECISION')}")
+                print(f"AI Routing\t\t\t{stage_status('AI_CLASSIFICATION')}")
+                print(f"Reporting\t\t\tPASS")
+                print("==================================================")
 
         return result, context

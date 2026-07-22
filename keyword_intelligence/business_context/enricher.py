@@ -135,14 +135,34 @@ class BusinessFactsEnricher:
     def _filter_and_dedupe(
         self, entities: list[EntityEvidence]
     ) -> list[EntityEvidence]:
-        """Removes noise and exactly duplicate entity names."""
+        """Removes noise, splits concatenated lists, drops sentences, and removes exact duplicates."""
+        # 1. Split concatenated strings (e.g. "Laptops, PCs & Monitors")
+        split_entities = []
+        for ent in entities:
+            parts = re.split(r",|\b&\b|\band\b", ent.entity, flags=re.IGNORECASE)
+            for p in parts:
+                p = p.strip()
+                if p:
+                    split_entities.append(
+                        EntityEvidence(
+                            entity=p,
+                            entity_type=ent.entity_type,
+                            evidence_sources=ent.evidence_sources,
+                            confidence_score=ent.confidence_score
+                        )
+                    )
+
         seen = set()
         clean = []
-        for ent in entities:
+        for ent in split_entities:
             # Normalize whitespace
             name = re.sub(r"\s+", " ", ent.entity.strip())
 
             if not name or len(name) < 2:
+                continue
+
+            # Drop marketing sentences (> 3 words)
+            if len(name.split()) > 3:
                 continue
 
             lower_name = name.lower()

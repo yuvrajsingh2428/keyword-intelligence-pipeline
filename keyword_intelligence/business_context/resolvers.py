@@ -25,12 +25,28 @@ class ResolvedFamily(NamedTuple):
     category: str
     confidence: float
 
+class ResolvedProduct(NamedTuple):
+    name: str
+    brand: str
+    category: str
+    confidence: float
+
+class ResolvedTechnology(NamedTuple):
+    name: str
+    confidence: float
+
+class ResolvedSynonym(NamedTuple):
+    name: str
+    parent_entity: str
+    confidence: float
+
 
 class BrandResolver:
     """Resolves brands from keywords."""
 
-    def __init__(self, profile: BusinessProfile) -> None:
+    def __init__(self, profile: BusinessProfile, norm_cache: dict[str, str] | None = None) -> None:
         self.profile = profile
+        self.norm_cache = norm_cache or {}
 
     def resolve(self, keyword: str) -> ResolvedBrand | None:
         """Find brand in keyword."""
@@ -46,11 +62,11 @@ class BrandResolver:
             brands_to_check.append(self.profile.company_name)
 
         for brand_name in brands_to_check:
-            patterns = [brand_name.lower()]
+            patterns = [self.norm_cache.get(brand_name, brand_name.lower())]
             if brand_name.lower() in self.profile.business_facts.synonyms:
                 patterns.extend(
                     [
-                        s.lower()
+                        self.norm_cache.get(s, s.lower())
                         for s in self.profile.business_facts.synonyms[
                             brand_name.lower()
                         ]
@@ -78,19 +94,20 @@ class BrandResolver:
 class CategoryResolver:
     """Resolves product categories from keywords."""
 
-    def __init__(self, profile: BusinessProfile) -> None:
+    def __init__(self, profile: BusinessProfile, norm_cache: dict[str, str] | None = None) -> None:
         self.profile = profile
+        self.norm_cache = norm_cache or {}
 
     def resolve(self, keyword: str) -> ResolvedCategory | None:
         """Find category in keyword."""
         kw_lower = keyword.lower()
         for cat_evidence in self.profile.business_facts.categories:
             cat_name = cat_evidence.entity
-            patterns = [cat_name.lower()]
+            patterns = [self.norm_cache.get(cat_name, cat_name.lower())]
             if cat_name.lower() in self.profile.business_facts.synonyms:
                 patterns.extend(
                     [
-                        s.lower()
+                        self.norm_cache.get(s, s.lower())
                         for s in self.profile.business_facts.synonyms[cat_name.lower()]
                     ]
                 )
@@ -107,19 +124,21 @@ class CategoryResolver:
 class ProductFamilyResolver:
     """Resolves specific product families from keywords."""
 
-    def __init__(self, profile: BusinessProfile) -> None:
+    def __init__(self, profile: BusinessProfile, norm_cache: dict[str, str] | None = None) -> None:
         self.profile = profile
+        self.norm_cache = norm_cache or {}
 
     def resolve(self, keyword: str) -> ResolvedFamily | None:
         """Find product family in keyword."""
         kw_lower = keyword.lower()
-        for fam_evidence in self.profile.business_facts.product_families:
+        evidences = self.profile.business_facts.product_families
+        for fam_evidence in evidences:
             family_name = fam_evidence.entity
-            patterns = [family_name.lower()]
+            patterns = [self.norm_cache.get(family_name, family_name.lower())]
             if family_name.lower() in self.profile.business_facts.synonyms:
                 patterns.extend(
                     [
-                        s.lower()
+                        self.norm_cache.get(s, s.lower())
                         for s in self.profile.business_facts.synonyms[
                             family_name.lower()
                         ]
@@ -143,5 +162,87 @@ class ProductFamilyResolver:
                         brand=brand,
                         category=category,
                         confidence=1.00,
+                    )
+        return None
+
+
+class ProductResolver:
+    """Resolves specific products from keywords."""
+
+    def __init__(self, profile: BusinessProfile, norm_cache: dict[str, str] | None = None) -> None:
+        self.profile = profile
+        self.norm_cache = norm_cache or {}
+
+    def resolve(self, keyword: str) -> ResolvedProduct | None:
+        """Find product in keyword."""
+        kw_lower = keyword.lower()
+        evidences = self.profile.business_facts.products
+        for prod_evidence in evidences:
+            prod_name = prod_evidence.entity
+            patterns = [self.norm_cache.get(prod_name, prod_name.lower())]
+            if prod_name.lower() in self.profile.business_facts.synonyms:
+                patterns.extend(
+                    [
+                        self.norm_cache.get(s, s.lower())
+                        for s in self.profile.business_facts.synonyms[
+                            prod_name.lower()
+                        ]
+                    ]
+                )
+
+            for pat in patterns:
+                if re.search(rf"\b{re.escape(pat)}\b", kw_lower):
+                    brand = self.profile.company_name
+                    category = "Unknown"
+                    for (
+                        parent_cat,
+                        children,
+                    ) in self.profile.business_facts.taxonomy.items():
+                        if prod_name in children:
+                            category = parent_cat
+                            break
+
+                    return ResolvedProduct(
+                        name=prod_name,
+                        brand=brand,
+                        category=category,
+                        confidence=1.00,
+                    )
+        return None
+
+
+class TechnologyResolver:
+    """Resolves technologies from keywords."""
+
+    def __init__(self, profile: BusinessProfile, norm_cache: dict[str, str] | None = None) -> None:
+        self.profile = profile
+        self.norm_cache = norm_cache or {}
+
+    def resolve(self, keyword: str) -> ResolvedTechnology | None:
+        """Find technology in keyword."""
+        kw_lower = keyword.lower()
+        for tech in self.profile.technologies:
+            pat = self.norm_cache.get(tech, tech.lower())
+            if re.search(rf"\b{re.escape(pat)}\b", kw_lower):
+                return ResolvedTechnology(name=tech, confidence=1.00)
+        return None
+
+
+class SynonymResolver:
+    """Resolves synonyms from keywords directly."""
+
+    def __init__(self, profile: BusinessProfile, norm_cache: dict[str, str] | None = None) -> None:
+        self.profile = profile
+        self.norm_cache = norm_cache or {}
+
+    def resolve(self, keyword: str) -> ResolvedSynonym | None:
+        """Find synonym in keyword."""
+        kw_lower = keyword.lower()
+        for parent_entity, syns in self.profile.business_facts.synonyms.items():
+            for syn in syns:
+                pat = self.norm_cache.get(syn, syn.lower())
+                if re.search(rf"\b{re.escape(pat)}\b", kw_lower):
+                    return ResolvedSynonym(
+                        name=syn, parent_entity=parent_entity, confidence=1.00
                     )
         return None

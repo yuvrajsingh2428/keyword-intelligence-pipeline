@@ -20,6 +20,12 @@ class DecisionEngine:
         business_confidence: float,
         requires_ai: bool,
         deterministic_reason: str | None,
+        brand_ev: str | None = None,
+        category_ev: str | None = None,
+        family_ev: str | None = None,
+        product_ev: str | None = None,
+        tech_ev: str | None = None,
+        synonym_ev: str | None = None,
     ) -> KeywordDecision:
         """Evaluate a single keyword's context and return a decision."""
         # 1. DROP: Irrelevant according to retail rules
@@ -30,7 +36,15 @@ class DecisionEngine:
                 decision_confidence=1.0,
             )
 
-        # 2. KEEP: High confidence deterministic match
+        # 2a. KEEP: Explicit Product Evidence override
+        if (product_ev or family_ev) and business_confidence >= self.confidence_threshold:
+            return KeywordDecision(
+                decision=DecisionEnum.KEEP,
+                decision_reason=f"Confident deterministic match: {deterministic_reason} (Explicit Product Match)",
+                decision_confidence=business_confidence,
+            )
+
+        # 2b. KEEP: High confidence deterministic match
         if not requires_ai and business_confidence >= self.confidence_threshold:
             return KeywordDecision(
                 decision=DecisionEnum.KEEP,

@@ -29,22 +29,45 @@ class AIClassificationStage(BaseStage):
 
     def execute(self, context: PipelineContext) -> PipelineContext:
         """Execute the AI intelligence engine."""
-        logger.info(f"Executing stage {self.stage_type.value}")
+        # Logging removed
 
-        self.engine.process(context)
+        stats = self.engine.process(context)
 
-        if (
-            context.has_data
-            and "decision" in context.data.columns
-            and "ai_relevance" in context.data.columns
-        ):
-            processed = (context.data["decision"] == "SEND_TO_AI").sum()
-            successful = context.data["ai_relevance"].notna().sum()
-            fallback = processed - successful
+        df = context.data
+        if not context.has_data:
+            return context
 
-            logger.info("\nAI Classification")
-            logger.info(f"Processed: {processed}")
-            logger.info(f"Successful: {successful}")
-            logger.info(f"Fallback: {fallback}")
+        # Reconstruct before AI counts
+        total_rows = len(df)
+        duplicates = (df["status"] == "DUPLICATE").sum() if "status" in df.columns else 0
+        keep = (df["decision"] == "KEEP").sum() if "decision" in df.columns else 0
+        drop = (df["decision"] == "DROP").sum() if "decision" in df.columns else 0
+        review = (df["decision"] == "REVIEW").sum() if "decision" in df.columns else 0
+        send = (df["decision"] == "SEND_TO_AI").sum() if "decision" in df.columns else total_rows
+
+        entry_trace = (
+            f"Before AI Starts\n"
+            f"Received by AI: {send}\n"
+            f"Excluded:\n"
+            f"Duplicate: {duplicates}\n"
+            f"KEEP: {keep}\n"
+            f"DROP: {drop}\n"
+            f"REVIEW: {review}\n"
+        )
+        
+        if stats:
+            exit_trace = (
+                f"\nAI Exit Trace\n"
+                f"Processed: {stats.resolved_keywords}\n"
+                f"Relevant: {(df['ai_relevance'] == 'RELEVANT').sum() if 'ai_relevance' in df.columns else 0}\n"
+                f"Irrelevant: {(df['ai_relevance'] == 'IRRELEVANT').sum() if 'ai_relevance' in df.columns else 0}\n"
+                f"Fallback: {stats.unresolved_keywords}\n"
+                f"Errors: {stats.failed_responses}\n"
+                f"Retries: {stats.retries}"
+            )
+        else:
+            exit_trace = ""
+
+        context.stage_diagnostics[self.stage_type.value] = f"{entry_trace}{exit_trace}"
 
         return context

@@ -39,7 +39,7 @@ class NormalizationStage(BaseStage):
             )
             return context
 
-        logger.info(f"Executing stage {self.stage_type.value}")
+        # Logging removed
 
         # Preserve the original keyword in a new column
         if "original_keyword" not in df.columns:
@@ -53,14 +53,13 @@ class NormalizationStage(BaseStage):
         df["normalized_keyword"] = normalization_result.normalized_series
         df["normalization_trace"] = normalization_result.trace_series
 
-        # Log metrics
         metrics = normalization_result.metrics
-        logger.info(
-            f"Normalization completed: {metrics.total_processed} processed, "
-            f"{metrics.total_modified} modified."
-        )
+        diagnostics_lines = ["Changes:"]
         for strategy, count in metrics.modifications_per_strategy.items():
-            logger.debug(f"{strategy}: {count} modifications")
+            strat_clean = strategy.replace('Normalizer', '')
+            diagnostics_lines.append(f"{strat_clean}: {count}")
+            
+        context.stage_diagnostics[self.stage_type.value] = "\n".join(diagnostics_lines)
 
         # Store metrics in context metadata if applicable
         if not hasattr(context, "metadata"):
